@@ -18,6 +18,44 @@
 --                       "Plantio (COE)" CONTA. O grupo "Despesa - Ambiental" não entra.
 -- =====================================================================
 
+
+-- ---------------------------------------------------------------------
+-- Fruta da safra: o nome da fruta vem escrito na safra ("COCO 2024", "Safra CAJU 25/26", "BANANA-2026" ...).
+-- Safras genéricas ("safra 2025") e lançamentos sem safra ficam em 'Sem fruta informada'.
+CREATE OR REPLACE FUNCTION public.fruta_da_safra(s text) RETURNS text
+LANGUAGE sql IMMUTABLE AS $f$
+  SELECT CASE
+    WHEN t ~ 'ABACATE'   THEN 'Abacate'
+    WHEN t ~ 'ABACAXI'   THEN 'Abacaxi'
+    WHEN t ~ 'ACEROLA'   THEN 'Acerola'
+    WHEN t ~ 'BANANA' OR t ~ 'BANABA' THEN 'Banana'
+    WHEN t ~ 'CAJU'      THEN 'Caju'
+    WHEN t ~ 'COCO'      THEN 'Coco'
+    WHEN t ~ 'GOIABA'    THEN 'Goiaba'
+    WHEN t ~ 'GRAVIOLA'  THEN 'Graviola'
+    WHEN t ~ 'LARANJA'   THEN 'Laranja'
+    WHEN t ~ 'LIMAO'     THEN 'Limão'
+    WHEN t ~ 'MAMAO'     THEN 'Mamão'
+    WHEN t ~ 'MANGA'     THEN 'Manga'
+    WHEN t ~ 'MARACUJA'  THEN 'Maracujá'
+    WHEN t ~ 'MORANGO'   THEN 'Morango'
+    WHEN t ~ 'PITAIA'    THEN 'Pitaia'
+    WHEN t ~ 'SAPOTI'    THEN 'Sapoti'
+    WHEN t ~ 'TANGERINA' THEN 'Tangerina'
+    WHEN t ~ '(^|[^A-Z])UVA($|[^A-Z])' THEN 'Uva'
+    ELSE 'Sem fruta informada' END
+  FROM (SELECT translate(upper(COALESCE(s, '')), 'ÁÀÂÃÉÊÍÓÔÕÚÇ', 'AAAAEEIOOOUC') AS t) x
+$f$;
+
+
+-- Nome da safra para o filtro: o texto da safra; as genéricas ("safra 2025") ganham o número para não misturar safras de frutas diferentes.
+CREATE OR REPLACE FUNCTION public.safra_nome(s text, id_s text) RETURNS text
+LANGUAGE sql IMMUTABLE AS $f$
+  SELECT CASE WHEN s IS NULL OR btrim(s) = '' THEN 'Sem safra informada'
+              WHEN public.fruta_da_safra(s) = 'Sem fruta informada' THEN btrim(s) || ' (nº ' || COALESCE(id_s, '?') || ')'
+              ELSE btrim(s) END
+$f$;
+
 DROP TABLE IF EXISTS public.resumo_fruta_propriedades;
 CREATE TABLE public.resumo_fruta_propriedades AS
 WITH ativas AS (  -- propriedades ATIVAS que têm vínculo ATIVO de FRUTICULTURA PERENE
@@ -94,8 +132,8 @@ CREATE INDEX ON public.resumo_fruta_propriedades (id_propriedade);
 CREATE INDEX ON public.resumo_fruta_propriedades (tecnico);
 
 -- ---------------------------------------------------------------------
-DROP TABLE IF EXISTS public.resumo_fruta_mensal;
-CREATE TABLE public.resumo_fruta_mensal AS
+DROP TABLE IF EXISTS public.resumo_fruta_mensal_fruta;
+CREATE TABLE public.resumo_fruta_mensal_fruta AS
 WITH param AS (
   SELECT DATE '2024-06-01' AS data_inicio, DATE '2026-12-31' AS data_fim
 ),
@@ -109,8 +147,9 @@ base AS (
     AND r.id_propriedade IN (SELECT id_propriedade FROM public.resumo_fruta_propriedades)
 ),
 q AS (
-  SELECT id_propriedade, grupo, id_visita, id_item, dt_referencia, subgrupo, item, SUM(valor) AS qtd
-  FROM base WHERE tipo_valor = 'QUANTIDADE' GROUP BY 1,2,3,4,5,6,7
+  SELECT id_propriedade, grupo, id_visita, id_item, dt_referencia, subgrupo, item,
+         public.fruta_da_safra(safra) AS fruta, public.safra_nome(safra, id_safra::text) AS safra_nome, SUM(valor) AS qtd
+  FROM base WHERE tipo_valor = 'QUANTIDADE' GROUP BY 1,2,3,4,5,6,7,8,9
 ),
 pr AS (
   SELECT id_propriedade, grupo, id_visita, id_item, dt_referencia, AVG(valor) AS preco
@@ -118,7 +157,7 @@ pr AS (
 ),
 v AS (
   SELECT q.id_propriedade, date_trunc('month', q.dt_referencia)::date AS mes,
-         q.grupo, q.subgrupo, q.item, q.qtd, q.qtd * pr.preco AS valor
+         q.fruta, q.safra_nome, q.grupo, q.subgrupo, q.item, q.qtd, q.qtd * pr.preco AS valor
   FROM q JOIN pr USING (id_propriedade, grupo, id_visita, id_item, dt_referencia)
 ),
 tec_mes AS (  -- técnico responsável pela visita daquele mês (técnico da época)
@@ -129,7 +168,7 @@ tec_mes AS (  -- técnico responsável pela visita daquele mês (técnico da ép
   GROUP BY 1, 2
 ),
 fin AS (
-  SELECT id_propriedade, mes,
+  SELECT id_propriedade, mes, fruta, safra_nome,
     SUM(qtd) FILTER (WHERE grupo = 'Receita' AND subgrupo ILIKE 'Venda de Fruta%'
          AND (item ILIKE '%(Kg)%' OR item ILIKE 'Venda de Am_ndoa Seca%')) AS kg_vendidos,
     SUM(qtd) FILTER (WHERE grupo = 'Receita' AND subgrupo ILIKE 'Venda de Fruta%' AND item ILIKE '%(Unidade)%') AS unidades_vendidas,
@@ -147,22 +186,45 @@ fin AS (
          AND item NOT ILIKE 'M_o de obra familiar') AS despesa_direta,
     SUM(valor) FILTER (WHERE grupo = 'Despesa' AND (item ILIKE 'M_o de obra familiar' OR subgrupo ILIKE 'M_o de obra familiar')) AS mao_obra_familiar,
     SUM(valor) FILTER (WHERE grupo = 'Despesa' AND subgrupo ILIKE 'Forma%o e Recupera%') AS despesa_formacao
-  FROM v GROUP BY 1,2
+  FROM v GROUP BY 1,2,3,4
 )
 SELECT f.id_propriedade,
        to_char(f.mes, 'YYYY-MM') AS mes,
+       f.fruta,
+       f.safra_nome,
        t.tecnico,
-       ROUND(f.kg_vendidos::numeric, 1)          AS kg_vendidos,
-       ROUND(f.unidades_vendidas::numeric, 1)    AS unidades_vendidas,
-       ROUND(f.venda_fruta_rs::numeric, 2)       AS venda_fruta_rs,
-       ROUND(f.venda_kg_rs::numeric, 2)          AS venda_kg_rs,
-       ROUND(f.receita_bruta::numeric, 2)        AS receita_bruta,
-       ROUND(f.despesa_direta::numeric, 2)       AS despesa_direta,
-       ROUND(f.mao_obra_familiar::numeric, 2)    AS mao_obra_familiar,
-       ROUND(f.despesa_formacao::numeric, 2)     AS despesa_formacao,
-       ROUND(f.despesa_total::numeric, 2)        AS despesa_total
+       f.kg_vendidos AS kg_vendidos,
+       f.unidades_vendidas AS unidades_vendidas,
+       f.venda_fruta_rs AS venda_fruta_rs,
+       f.venda_kg_rs AS venda_kg_rs,
+       f.receita_bruta AS receita_bruta,
+       f.despesa_direta AS despesa_direta,
+       f.mao_obra_familiar AS mao_obra_familiar,
+       f.despesa_formacao AS despesa_formacao,
+       f.despesa_total AS despesa_total
 FROM fin f
 LEFT JOIN tec_mes t ON t.id_propriedade = f.id_propriedade AND t.mes = f.mes;
+
+CREATE INDEX ON public.resumo_fruta_mensal_fruta (id_propriedade, mes);
+CREATE INDEX ON public.resumo_fruta_mensal_fruta (fruta);
+CREATE INDEX ON public.resumo_fruta_mensal_fruta (safra_nome);
+
+
+-- Mensal TOTAL (todas as frutas somadas): 1 linha por propriedade e mês, igual ao que o painel sempre usou.
+DROP TABLE IF EXISTS public.resumo_fruta_mensal;
+CREATE TABLE public.resumo_fruta_mensal AS
+SELECT id_propriedade, mes, MAX(tecnico) AS tecnico,
+       ROUND(SUM(kg_vendidos)::numeric, 1)       AS kg_vendidos,
+       ROUND(SUM(unidades_vendidas)::numeric, 1) AS unidades_vendidas,
+       ROUND(SUM(venda_fruta_rs)::numeric, 2)    AS venda_fruta_rs,
+       ROUND(SUM(venda_kg_rs)::numeric, 2)       AS venda_kg_rs,
+       ROUND(SUM(receita_bruta)::numeric, 2)     AS receita_bruta,
+       ROUND(SUM(despesa_direta)::numeric, 2)    AS despesa_direta,
+       ROUND(SUM(mao_obra_familiar)::numeric, 2) AS mao_obra_familiar,
+       ROUND(SUM(despesa_formacao)::numeric, 2)  AS despesa_formacao,
+       ROUND(SUM(despesa_total)::numeric, 2)     AS despesa_total
+FROM public.resumo_fruta_mensal_fruta
+GROUP BY id_propriedade, mes;
 
 CREATE INDEX ON public.resumo_fruta_mensal (id_propriedade);
 CREATE INDEX ON public.resumo_fruta_mensal (tecnico);
@@ -179,20 +241,21 @@ WITH base AS (
     AND r.id_propriedade IN (SELECT id_propriedade FROM public.resumo_fruta_propriedades)
 ),
 q AS (
-  SELECT id_propriedade, id_visita, id_item, dt_referencia, subgrupo, item, SUM(valor) AS qtd
-  FROM base WHERE tipo_valor = 'QUANTIDADE' GROUP BY 1,2,3,4,5,6
+  SELECT id_propriedade, id_visita, id_item, dt_referencia, subgrupo, item,
+         public.fruta_da_safra(safra) AS fruta, public.safra_nome(safra, id_safra::text) AS safra_nome, SUM(valor) AS qtd
+  FROM base WHERE tipo_valor = 'QUANTIDADE' GROUP BY 1,2,3,4,5,6,7,8
 ),
 pr AS (
   SELECT id_propriedade, id_visita, id_item, dt_referencia, AVG(valor) AS preco
   FROM base WHERE tipo_valor = 'VALOR_UNITARIO' GROUP BY 1,2,3,4
 )
-SELECT q.id_propriedade, to_char(date_trunc('month', q.dt_referencia), 'YYYY-MM') AS mes, q.subgrupo,
+SELECT q.id_propriedade, to_char(date_trunc('month', q.dt_referencia), 'YYYY-MM') AS mes, q.fruta, q.safra_nome, q.subgrupo,
        ROUND(SUM(q.qtd * pr.preco)::numeric, 2) AS valor
 FROM q JOIN pr USING (id_propriedade, id_visita, id_item, dt_referencia)
 WHERE q.subgrupo NOT ILIKE 'Empr%' AND q.subgrupo NOT ILIKE 'Investimento%'
   AND q.subgrupo NOT ILIKE 'Forma%o e Recupera%' AND q.subgrupo NOT ILIKE 'M_o de obra familiar'
   AND q.item NOT ILIKE 'M_o de obra familiar'
-GROUP BY 1,2,3;
+GROUP BY 1,2,3,4,5;
 CREATE INDEX ON public.resumo_fruta_despesa_subgrupo (id_propriedade, mes);
 
 -- Receitas e despesas por TIPO (subgrupo) e classe: alimenta a aba "Receitas e despesas".
@@ -210,15 +273,16 @@ WITH base AS (
     AND r.id_propriedade IN (SELECT id_propriedade FROM public.resumo_fruta_propriedades)
 ),
 q AS (
-  SELECT id_propriedade, id_visita, id_item, dt_referencia, grupo, subgrupo, item, SUM(valor) AS qtd
-  FROM base WHERE tipo_valor = 'QUANTIDADE' GROUP BY 1,2,3,4,5,6,7
+  SELECT id_propriedade, id_visita, id_item, dt_referencia, grupo, subgrupo, item,
+         public.fruta_da_safra(safra) AS fruta, public.safra_nome(safra, id_safra::text) AS safra_nome, SUM(valor) AS qtd
+  FROM base WHERE tipo_valor = 'QUANTIDADE' GROUP BY 1,2,3,4,5,6,7,8,9
 ),
 pr AS (
   SELECT id_propriedade, id_visita, id_item, dt_referencia, AVG(valor) AS preco
   FROM base WHERE tipo_valor = 'VALOR_UNITARIO' GROUP BY 1,2,3,4
 ),
 v AS (
-  SELECT q.id_propriedade, to_char(date_trunc('month', q.dt_referencia), 'YYYY-MM') AS mes, q.grupo, q.subgrupo,
+  SELECT q.id_propriedade, to_char(date_trunc('month', q.dt_referencia), 'YYYY-MM') AS mes, q.fruta, q.safra_nome, q.grupo, q.subgrupo,
          CASE WHEN q.subgrupo ILIKE 'Empr%' OR q.subgrupo ILIKE 'Investimento%' THEN
                 CASE WHEN q.grupo = 'Receita' THEN 'Fora da receita bruta' ELSE 'Fora das despesas' END
               WHEN q.grupo = 'Receita' THEN 'Receita bruta'
@@ -228,12 +292,13 @@ v AS (
          q.qtd * pr.preco AS valor
   FROM q JOIN pr USING (id_propriedade, id_visita, id_item, dt_referencia)
 )
-SELECT id_propriedade, mes, grupo, classe, subgrupo, ROUND(SUM(valor)::numeric, 2) AS valor
-FROM v GROUP BY 1,2,3,4,5;
+SELECT id_propriedade, mes, fruta, safra_nome, grupo, classe, subgrupo, ROUND(SUM(valor)::numeric, 2) AS valor
+FROM v GROUP BY 1,2,3,4,5,6,7;
 CREATE INDEX ON public.resumo_fruta_tipo (id_propriedade, mes);
 
 ANALYZE public.resumo_fruta_propriedades;
 ANALYZE public.resumo_fruta_mensal;
+ANALYZE public.resumo_fruta_mensal_fruta;
 
 -- Conferência: propriedades e quantas têm lançamento de fruticultura
 SELECT (SELECT COUNT(*) FROM public.resumo_fruta_propriedades) AS propriedades,

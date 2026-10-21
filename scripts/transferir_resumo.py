@@ -55,6 +55,7 @@ def main():
     destino = eng("REMOTE")
     copiar(origem, destino, "resumo_fruta_propriedades", ["id_propriedade", "tecnico"])
     copiar(origem, destino, "resumo_fruta_mensal", ["id_propriedade", "mes"])
+    copiar(origem, destino, "resumo_fruta_mensal_fruta", ["id_propriedade", "mes"])
     copiar(origem, destino, "resumo_fruta_despesa_subgrupo", ["id_propriedade", "mes"])
     copiar(origem, destino, "resumo_fruta_tipo", ["id_propriedade", "mes"])
     # recria as views (o DROP CASCADE acima apaga as antigas)
