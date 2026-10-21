@@ -13,7 +13,7 @@
   :root{
     --bg:#fff7ea; --surf:#ffffff; --ink:#2a2016; --mut:#6b5a47; --linha:#f3e3cc; --suave:#fffaf2;
     --verde:#e07b12; --verde-esc:#a8500a; --pos:#2e7d4f; --neg:#b3261e;
-    --c-receita:#e07b12; --c-venda:#0b7a80; --c-prod:#2b59a8; --c-media:#8a5a9e; --c-mat:#7c8a1c; --c-mleite:#3d7a3a; --c-neutro:#6b5a47; --c-desp:#c0392b;
+    --c-receita:#e07b12; --c-venda:#0b7a80; --c-prod:#2b59a8; --c-media:#8a5a9e; --c-mat:#7c8a1c; --c-un:#b8336a; --c-mleite:#3d7a3a; --c-neutro:#6b5a47; --c-desp:#c0392b;
   }
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
@@ -62,9 +62,10 @@
   .ico svg{width:22px;height:22px}
   .ico.sm{width:32px;height:32px} .ico.sm svg{width:18px;height:18px}
 
-  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
-  @media(min-width:1180px){.kpis{grid-template-columns:repeat(7,minmax(0,1fr))}}
-  @media(max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
+  /* telas largas: linha 1 = propriedades + dinheiro (5 cartões); linha 2 = kg e unidades (4 cartões); as duas linhas preenchem a largura */
+  @media(min-width:1180px){.kpis{grid-template-columns:repeat(20,minmax(0,1fr))}.kpis>.kpi{grid-column:span 4}.kpis>.kpi:nth-child(n+6){grid-column:span 5}}
+  @media(max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis>.kpi:first-child{grid-column:1 / -1}}
   .kpi{container-type:inline-size;background:var(--surf);border:1px solid var(--linha);border-radius:12px;padding:12px 14px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
   .k-topo{display:flex;align-items:center;gap:8px;min-width:0}
   .k-rot{font-size:12.5px;color:var(--mut);font-weight:500;line-height:1.2;min-height:2.4em;display:flex;align-items:center}
@@ -208,9 +209,11 @@
     <section class="graf" style="--cor:var(--c-venda)"><div class="g-topo"><span class="ico g" data-ico="garrafa"></span><div class="g-tit"><h2>Venda de fruta (R$)</h2><p class="formula">Fruta vendida em kg e em unidade (sem mudas e subprodutos)</p></div><div class="pill" id="pl-c6"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c6"></canvas></div></section>
     <section class="graf" style="--cor:var(--c-venda)"><div class="g-topo"><span class="ico g" data-ico="garrafa"></span><div class="g-tit"><h2>Preço médio por kg vendido (R$/kg)</h2><p class="formula">Média dos preços das propriedades: venda de fruta em kg ÷ kg vendidos</p></div><div class="pill" id="pl-c8"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c8"></canvas></div></section>
     <section class="graf" style="--cor:var(--c-prod)"><div class="g-topo"><span class="ico g" data-ico="gota"></span><div class="g-tit"><h2>Fruta vendida (kg)</h2><p class="formula">Só itens vendidos em kg (unidades não entram)</p></div><div class="pill" id="pl-c2"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c2"></canvas></div></section>
+    <section class="graf" style="--cor:var(--c-un)"><div class="g-topo"><span class="ico g" data-ico="gota"></span><div class="g-tit"><h2>Fruta vendida (unidades)</h2><p class="formula">Só itens vendidos por unidade (kg não entra)</p></div><div class="pill" id="pl-c9"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c9"></canvas></div></section>
     <section class="graf" style="--cor:var(--c-mat)"><div class="g-topo"><span class="ico g" data-ico="barras"></span><div class="g-tit"><h2>Margem bruta da atividade (R$)</h2><p class="formula">Receita bruta &minus; despesa direta</p></div><div class="pill" id="pl-c3"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c3"></canvas></div></section>
     <section class="graf" style="--cor:var(--c-mleite)"><div class="g-topo"><span class="ico g" data-ico="calc"></span><div class="g-tit"><h2>Margem bruta da venda de fruta (R$)</h2><p class="formula">Venda de fruta &minus; despesa direta</p></div><div class="pill" id="pl-c4"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c4"></canvas></div></section>
     <section class="graf" style="--cor:var(--c-media)"><div class="g-topo"><span class="ico g" data-ico="pessoas"></span><div class="g-tit"><h2>Kg vendidos por produtor (kg)</h2><p class="formula">Kg vendidos ÷ produtores com lançamento no mês</p></div><div class="pill" id="pl-c5"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c5"></canvas></div></section>
+    <section class="graf" style="--cor:var(--c-un)"><div class="g-topo"><span class="ico g" data-ico="pessoas"></span><div class="g-tit"><h2>Unidades vendidas por produtor</h2><p class="formula">Unidades vendidas ÷ produtores com lançamento no mês</p></div><div class="pill" id="pl-c10"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c10"></canvas></div></section>
   </div>
   <section class="detalhe" id="aba-tabela" hidden><div class="d-topo"><h2>Detalhe mensal</h2><span class="xls-msg" id="xlsMsg"></span><button class="btn sec" id="btnXls" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>Baixar Excel</button></div><div class="rolagem"><table id="tab"></table></div></section>
 </div>
@@ -390,10 +393,12 @@ async function atualiza(){
     `<div class="kpi"><div class="k-topo">${icoGrande('casa','var(--c-neutro)')}<span class="k-rot">${$('sit').value==='inativa' ? 'Propriedades inativas' : 'Propriedades ativas'}</span></div><b>${nf.format(ult.propriedades_total)}</b><div class="k-var">${nf.format(ult.propriedades)} com lançamento no mês</div>${spark(semParcial(d.map(x=>x.propriedades)),'#6b5a47')}</div>`,
     cartao('Receita bruta', brl2(ult.receita_bruta), ult.var_receita_pct, d.map(x=>x.receita_bruta), 'var(--c-receita)', 'moedas'),
     cartao('Venda de fruta', brl2(ult.venda_leite), ult.var_venda_leite_pct, d.map(x=>x.venda_leite), 'var(--c-venda)', 'garrafa'),
+    cartao('Margem bruta da atividade', brl2(ult.margem_bruta), ult.var_margem_pct, d.map(x=>x.margem_bruta), 'var(--c-mat)', 'barras'),
+    cartao('Margem bruta da venda de fruta', brl2(ult.margem_leite), ult.var_margem_leite_pct, d.map(x=>x.margem_leite), 'var(--c-mleite)', 'calc'),
     cartao('Kg vendidos', nf.format(ult.producao), ult.var_producao_pct, d.map(x=>x.producao), 'var(--c-prod)', 'gota'),
     cartao('Kg vendidos por produtor', nf.format(ult.producao_media_produtor), ult.var_prod_media_pct, d.map(x=>x.producao_media_produtor), 'var(--c-media)', 'pessoas'),
-    cartao('Margem bruta da atividade', brl2(ult.margem_bruta), ult.var_margem_pct, d.map(x=>x.margem_bruta), 'var(--c-mat)', 'barras'),
-    cartao('Margem bruta da venda de fruta', brl2(ult.margem_leite), ult.var_margem_leite_pct, d.map(x=>x.margem_leite), 'var(--c-mleite)', 'calc')
+    cartao('Unidades vendidas', nf.format(ult.unidades||0), ult.var_unidades_pct, d.map(x=>x.unidades), 'var(--c-un)', 'gota'),
+    cartao('Unidades vendidas por produtor', nf.format(ult.unidades_media_produtor||0), ult.var_un_media_pct, d.map(x=>x.unidades_media_produtor), 'var(--c-un)', 'pessoas')
   ].join('') : '<p>Sem dados para o filtro.</p>';
   carregaDestaques(q, parcial);
   carregaCausas(q);
@@ -406,9 +411,11 @@ async function atualiza(){
   setPill('c6', soma('venda_leite'), true, 'Total no período', 2);
   setPill('c8', media('preco_medio'), true, 'Média no período', 2);
   setPill('c2', soma('producao'), false, 'Total no período', 0);
+  setPill('c9', soma('unidades'), false, 'Total no período', 0);
   setPill('c3', soma('margem_bruta'), true, 'Total no período', 2);
   setPill('c4', soma('margem_leite'), true, 'Total no período', 2);
   setPill('c5', media('producao_media_produtor'), false, 'Média no período', 0);
+  setPill('c10', media('unidades_media_produtor'), false, 'Média no período', 0);
   desenha('c1', m, d.map(x=>x.receita_bruta), css('--c-receita'), 2, true, parcial);
   desenha('c6', m, d.map(x=>x.venda_leite), css('--c-venda'), 2, true, parcial);
   desenha('c7', m, d.map(x=>x.despesa_direta), css('--c-desp'), 2, true, parcial);
@@ -416,7 +423,9 @@ async function atualiza(){
   desenha('c3', m, d.map(x=>x.margem_bruta), css('--c-mat'), 2, true, parcial, true);
   desenha('c4', m, d.map(x=>x.margem_leite), css('--c-mleite'), 2, true, parcial, true);
   desenha('c2', m, d.map(x=>x.producao), css('--c-prod'), 0, false, parcial);
+  desenha('c9', m, d.map(x=>x.unidades), css('--c-un'), 0, false, parcial);
   desenha('c5', m, d.map(x=>x.producao_media_produtor), css('--c-media'), 0, false, parcial);
+  desenha('c10', m, d.map(x=>x.unidades_media_produtor), css('--c-un'), 0, false, parcial);
   const grupos = ['Receita bruta','Venda de fruta','Preço por kg (R$)','Despesa direta','Kg vendidos','Margem da atividade','Margem da venda de fruta','Kg/produtor'];
   $('tab').innerHTML = '<thead><tr><th rowspan="2">Mês</th><th rowspan="2" class="sep">Com lançamento</th>' +
     grupos.map(g=>`<th class="g" colspan="2">${g}</th>`).join('') + '</tr><tr>' + grupos.map(()=>'<th class="sep">Valor</th><th>Var.</th>').join('') + '</tr></thead><tbody>' +

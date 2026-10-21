@@ -122,6 +122,7 @@ def serie(supervisor: str | None = None, tecnico: str | None = None, propriedade
         SELECT mes,
                COUNT(DISTINCT id_propriedade)           AS propriedades,
                COALESCE(SUM(kg_vendidos), 0)       AS producao,
+               COALESCE(SUM(unidades_vendidas), 0) AS unidades,
                COALESCE(SUM(receita_bruta), 0)          AS receita_bruta,
                COALESCE(SUM(venda_fruta_rs), 0)         AS venda_leite,
                COALESCE(SUM(despesa_direta), 0)         AS despesa_direta,
@@ -152,6 +153,8 @@ def serie(supervisor: str | None = None, tecnico: str | None = None, propriedade
         for k in ("producao", "receita_bruta", "venda_leite", "despesa_direta", "margem_bruta", "margem_leite"):
             r[k] = float(r[k])
         r["producao_media_produtor"] = round(r["producao"] / r["produtores"], 1) if r["produtores"] else 0
+        r["unidades"] = float(r["unidades"] or 0)
+        r["unidades_media_produtor"] = round(r["unidades"] / r["produtores"], 1) if r["produtores"] else 0
         r["var_receita_pct"] = None if not prev or not prev["receita_bruta"] else round((r["receita_bruta"] / prev["receita_bruta"] - 1) * 100, 1)
         r["var_venda_leite_pct"] = None if not prev or not prev["venda_leite"] else round((r["venda_leite"] / prev["venda_leite"] - 1) * 100, 1)
         r["var_despesa_pct"] = None if not prev or not prev["despesa_direta"] else round((r["despesa_direta"] / prev["despesa_direta"] - 1) * 100, 1)
@@ -159,6 +162,8 @@ def serie(supervisor: str | None = None, tecnico: str | None = None, propriedade
         r["var_margem_pct"] = None if not prev or not prev["margem_bruta"] else round((r["margem_bruta"] / abs(prev["margem_bruta"]) - 1) * 100, 1)
         r["var_margem_leite_pct"] = None if not prev or not prev["margem_leite"] else round((r["margem_leite"] / abs(prev["margem_leite"]) - 1) * 100, 1)
         r["var_prod_media_pct"] = None if not prev or not prev["producao_media_produtor"] else round((r["producao_media_produtor"] / prev["producao_media_produtor"] - 1) * 100, 1)
+        r["var_unidades_pct"] = None if not prev or not prev["unidades"] else round((r["unidades"] / prev["unidades"] - 1) * 100, 1)
+        r["var_un_media_pct"] = None if not prev or not prev["unidades_media_produtor"] else round((r["unidades_media_produtor"] / prev["unidades_media_produtor"] - 1) * 100, 1)
         r["var_preco_pct"] = None if not prev or not prev["preco_medio"] or r["preco_medio"] is None else round((r["preco_medio"] / prev["preco_medio"] - 1) * 100, 1)
         prev = r
     return rows
