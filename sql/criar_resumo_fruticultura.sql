@@ -132,16 +132,41 @@ CREATE INDEX ON public.resumo_fruta_propriedades (id_propriedade);
 CREATE INDEX ON public.resumo_fruta_propriedades (tecnico);
 
 -- ---------------------------------------------------------------------
+-- Itens da fruticultura com o MÊS CORRIGIDO: a data do item (dt_referencia) fica velha quando o técnico corrige a referência
+-- da visita no SisATeG; a planilha usa a referência da visita. Regra (igual à Bovinocultura): usa a referência da visita
+-- quando ela existe e está a até 366 dias da data do item; senão, a data do item.
+DROP TABLE IF EXISTS public.resumo_fruta_rd;
+CREATE TABLE public.resumo_fruta_rd AS
+WITH vis AS (
+  SELECT id_visita AS idv,
+         MAX(CASE WHEN referencia_visita ~ '^[0-9]{4}-[0-9]{2}$' THEN to_date(referencia_visita || '-01', 'YYYY-MM-DD') END) AS ref,
+         MAX(visita_valida) AS valida
+  FROM public.acompanhamento_mensal_visitas
+  GROUP BY id_visita
+)
+SELECT r.atividade, r.status_item, r.tipo_registro, r.id_propriedade, r.grupo, r.id_visita, r.id_item,
+       r.subgrupo, r.item, r.safra, r.id_safra, r.tipo_valor, r.valor,
+       CASE WHEN v.ref IS NOT NULL AND abs(r.dt_referencia::date - v.ref) <= 366
+            THEN v.ref::timestamp ELSE r.dt_referencia END AS dt_referencia,
+       v.valida AS visita_valida
+FROM public.sisateg_receita_despesa r
+LEFT JOIN vis v ON v.idv = r.id_visita
+WHERE r.atividade = 'FRUTICULTURA PERENE' AND r.status_item = 'ATIVO' AND r.tipo_registro = 'PRINCIPAL'
+  AND r.dt_referencia >= DATE '2024-01-01';
+CREATE INDEX ON public.resumo_fruta_rd (id_propriedade);
+CREATE INDEX ON public.resumo_fruta_rd (id_visita);
+ANALYZE public.resumo_fruta_rd;   -- o banco precisa saber o tamanho da tabela nova para escolher um bom plano nos passos seguintes
+
 -- Última visita de cada propriedade em cada mês: o SisATeG (planilha) conta só ela; visitas repetidas no mês não somam.
 DROP TABLE IF EXISTS public.resumo_fruta_visita_ult;
 CREATE TABLE public.resumo_fruta_visita_ult AS
 SELECT DISTINCT ON (id_propriedade, date_trunc('month', dt_referencia)) id_propriedade,
        date_trunc('month', dt_referencia)::date AS mes, id_visita
-FROM public.sisateg_receita_despesa
-WHERE atividade = 'FRUTICULTURA PERENE' AND status_item = 'ATIVO' AND tipo_registro = 'PRINCIPAL'
-  AND dt_referencia >= DATE '2024-06-01'
-ORDER BY id_propriedade, date_trunc('month', dt_referencia), id_visita DESC;
+FROM public.resumo_fruta_rd
+WHERE dt_referencia >= DATE '2024-06-01'
+ORDER BY id_propriedade, date_trunc('month', dt_referencia), (visita_valida = 'Valida') DESC NULLS LAST, id_visita DESC;
 CREATE INDEX ON public.resumo_fruta_visita_ult (id_visita);
+ANALYZE public.resumo_fruta_visita_ult;
 
 DROP TABLE IF EXISTS public.resumo_fruta_mensal_fruta;
 CREATE TABLE public.resumo_fruta_mensal_fruta AS
@@ -150,7 +175,7 @@ WITH param AS (
 ),
 base AS (
   SELECT r.*
-  FROM public.sisateg_receita_despesa r, param p
+  FROM public.resumo_fruta_rd r, param p
   WHERE r.atividade = 'FRUTICULTURA PERENE'
     AND r.status_item = 'ATIVO'
     AND r.tipo_registro = 'PRINCIPAL'
@@ -248,7 +273,7 @@ CREATE INDEX ON public.resumo_fruta_mensal (mes);
 DROP TABLE IF EXISTS public.resumo_fruta_despesa_subgrupo;
 CREATE TABLE public.resumo_fruta_despesa_subgrupo AS
 WITH base AS (
-  SELECT r.* FROM public.sisateg_receita_despesa r
+  SELECT r.* FROM public.resumo_fruta_rd r
   WHERE r.atividade = 'FRUTICULTURA PERENE' AND r.status_item = 'ATIVO' AND r.tipo_registro = 'PRINCIPAL'
     AND r.dt_referencia BETWEEN DATE '2024-06-01' AND DATE '2026-12-31'
     AND r.grupo = 'Despesa'
@@ -282,7 +307,7 @@ CREATE INDEX ON public.resumo_fruta_despesa_subgrupo (id_propriedade, mes);
 DROP TABLE IF EXISTS public.resumo_fruta_tipo;
 CREATE TABLE public.resumo_fruta_tipo AS
 WITH base AS (
-  SELECT r.* FROM public.sisateg_receita_despesa r
+  SELECT r.* FROM public.resumo_fruta_rd r
   WHERE r.atividade = 'FRUTICULTURA PERENE' AND r.status_item = 'ATIVO' AND r.tipo_registro = 'PRINCIPAL'
     AND r.dt_referencia BETWEEN DATE '2024-06-01' AND DATE '2026-12-31'
     AND r.grupo IN ('Receita','Despesa')
