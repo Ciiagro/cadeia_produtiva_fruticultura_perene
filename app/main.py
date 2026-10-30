@@ -513,7 +513,7 @@ def conferencia(mes: str = Query(..., description="YYYY-MM")):
         fora, tipos = {}, {}
     try:
         with engine.connect() as con:
-            rows = con.execute(text(f"""SELECT id_propriedade::text AS id, MAX(id_visita) AS id_visita, MAX(propriedade) AS propriedade, MAX(municipio) AS municipio, MAX(projeto) AS projeto,
+            rows = con.execute(text(f"""SELECT id_propriedade::text AS id, NULL AS id_visita, MAX(propriedade) AS propriedade, MAX(municipio) AS municipio, MAX(projeto) AS projeto,
                        BOOL_OR(COALESCE(ativa, FALSE)) AS ativa, SUM(receita_bruta) AS rec, SUM(despesa_direta) AS desp, SUM(kg_vendidos) AS prod
                      FROM {TABLE} WHERE mes = :m AND COALESCE(projeto, '') NOT ILIKE 'TREINAMENTO%'
                      GROUP BY id_propriedade"""), {"m": mes}).mappings().all()
