@@ -50,7 +50,7 @@ _CACHE: dict = {}
 
 @app.middleware("http")
 async def cache_api(request: Request, call_next):
-    if request.method != "GET" or not request.url.path.startswith("/api/") or _CACHE_TTL <= 0:
+    if request.method != "GET" or not request.url.path.startswith("/api/") or _CACHE_TTL <= 0 or request.url.path in ("/api/conferencia", "/api/visitas_painel"):   # a conferência mostra o dado novo na hora
         return await call_next(request)
     chave = request.url.path + "?" + request.url.query
     agora = time.time()
@@ -489,6 +489,60 @@ def tipos(supervisor: str | None = None, tecnico: str | None = None, propriedade
     return {"de": ms["a"] if ms else None, "ate": ms["b"] if ms else None,
             "receita_bruta": rb, "receita_fora": rf, "despesa_direta": dd, "despesa_outras": od, "despesa_fora": df,
             "despesa_total": desp_total, "receita_total": rec_total, "margem_bruta": rb["total"] - dd["total"]}
+
+
+@app.get("/api/conferencia")
+def conferencia(mes: str = Query(..., description="YYYY-MM")):
+    """Aba 'Conferência': receita bruta, despesa direta e kg vendidos do painel, por propriedade e visita, em um mês (para comparar com a planilha do SisATeG)."""
+    treino = []
+    try:   # propriedades de projetos de TREINAMENTO: não entram no painel, então a conferência também as ignora
+        with engine.connect() as con:
+            treino = [r[0] for r in con.execute(text(f"SELECT DISTINCT id_propriedade::text FROM {PROPS} WHERE COALESCE(projeto, '') ILIKE 'TREINAMENTO%'"))]
+    except Exception:
+        treino = []
+    fora, tipos = {}, {}
+    try:   # receita que o SisATeG soma em "Receitas" mas fica fora da receita bruta (venda de bem e empréstimo) + tipo de cada receita/despesa (de onde vem a diferença)
+        with engine.connect() as con:
+            for r in con.execute(text(f"""SELECT id_propriedade::text AS id, grupo, classe, subgrupo, SUM(valor) AS v FROM {TIPO}
+                      WHERE mes = :m AND COALESCE(projeto, '') NOT ILIKE 'TREINAMENTO%' GROUP BY 1, 2, 3, 4
+                      HAVING ABS(COALESCE(SUM(valor), 0)) > 0"""), {"m": mes}).mappings():
+                tipos.setdefault(r["id"], []).append([r["grupo"], r["classe"], r["subgrupo"], float(r["v"] or 0)])
+                if r["classe"] == "Fora da receita bruta":
+                    fora[r["id"]] = fora.get(r["id"], 0.0) + float(r["v"] or 0)
+    except Exception:
+        fora, tipos = {}, {}
+    try:
+        with engine.connect() as con:
+            rows = con.execute(text(f"""SELECT id_propriedade::text AS id, MAX(id_visita) AS id_visita, MAX(propriedade) AS propriedade, MAX(municipio) AS municipio, MAX(projeto) AS projeto,
+                       BOOL_OR(COALESCE(ativa, FALSE)) AS ativa, SUM(receita_bruta) AS rec, SUM(despesa_direta) AS desp, SUM(kg_vendidos) AS prod
+                     FROM {TABLE} WHERE mes = :m AND COALESCE(projeto, '') NOT ILIKE 'TREINAMENTO%'
+                     GROUP BY id_propriedade"""), {"m": mes}).mappings().all()
+    except Exception as e:
+        return {"erro": str(e).splitlines()[0][:300]}
+    return {"mes": mes, "com_visita": True, "treino": treino, "tipos": tipos,
+            "itens": [{"id": r["id"], "id_visita": r["id_visita"], "propriedade": r["propriedade"], "municipio": r["municipio"], "projeto": r["projeto"], "ativa": bool(r["ativa"]), "rec_fora": fora.get(r["id"], 0.0),
+                       "rec": float(r["rec"] or 0), "desp": float(r["desp"] or 0), "prod": float(r["prod"] or 0)} for r in rows]}
+
+
+@app.get("/api/visitas_painel")
+def visitas_painel(ids: str = Query(..., description="ids de visita separados por vírgula")):
+    """Conferência: em que mês(es) o painel tem cada visita (para explicar visita que está na planilha e não aparece no mês)."""
+    lista = [i for i in re.findall(r"\d+", ids)][:200]
+    if not lista:
+        return {"itens": {}}
+    try:
+        with engine.connect() as con:
+            rows = con.execute(text(f"""SELECT id_visita, mes, id_propriedade::text AS id, propriedade FROM {TABLE}
+                       WHERE id_visita IS NOT NULL AND string_to_array(id_visita, ',') && CAST(:ids AS text[])"""), {"ids": lista}).mappings().all()
+    except Exception as e:
+        return {"erro": str(e).splitlines()[0][:300]}
+    out = {}
+    for r in rows:
+        for v in str(r["id_visita"]).split(","):
+            v = v.strip()
+            if v in lista:
+                out.setdefault(v, []).append({"mes": str(r["mes"])[:7], "id": r["id"], "propriedade": r["propriedade"]})
+    return {"itens": out}
 
 
 @app.get("/health")
