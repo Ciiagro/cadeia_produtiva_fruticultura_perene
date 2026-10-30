@@ -132,6 +132,17 @@ CREATE INDEX ON public.resumo_fruta_propriedades (id_propriedade);
 CREATE INDEX ON public.resumo_fruta_propriedades (tecnico);
 
 -- ---------------------------------------------------------------------
+-- Última visita de cada propriedade em cada mês: o SisATeG (planilha) conta só ela; visitas repetidas no mês não somam.
+DROP TABLE IF EXISTS public.resumo_fruta_visita_ult;
+CREATE TABLE public.resumo_fruta_visita_ult AS
+SELECT DISTINCT ON (id_propriedade, date_trunc('month', dt_referencia)) id_propriedade,
+       date_trunc('month', dt_referencia)::date AS mes, id_visita
+FROM public.sisateg_receita_despesa
+WHERE atividade = 'FRUTICULTURA PERENE' AND status_item = 'ATIVO' AND tipo_registro = 'PRINCIPAL'
+  AND dt_referencia >= DATE '2024-06-01'
+ORDER BY id_propriedade, date_trunc('month', dt_referencia), id_visita DESC;
+CREATE INDEX ON public.resumo_fruta_visita_ult (id_visita);
+
 DROP TABLE IF EXISTS public.resumo_fruta_mensal_fruta;
 CREATE TABLE public.resumo_fruta_mensal_fruta AS
 WITH param AS (
@@ -145,6 +156,7 @@ base AS (
     AND r.tipo_registro = 'PRINCIPAL'
     AND r.dt_referencia BETWEEN p.data_inicio AND p.data_fim
     AND r.id_propriedade IN (SELECT id_propriedade FROM public.resumo_fruta_propriedades)
+    AND r.id_visita IN (SELECT id_visita FROM public.resumo_fruta_visita_ult)   -- só a última visita do mês (como a planilha do SisATeG)
 ),
 q AS (
   SELECT id_propriedade, grupo, id_visita, id_item, dt_referencia, subgrupo, item,
@@ -241,6 +253,7 @@ WITH base AS (
     AND r.dt_referencia BETWEEN DATE '2024-06-01' AND DATE '2026-12-31'
     AND r.grupo = 'Despesa'
     AND r.id_propriedade IN (SELECT id_propriedade FROM public.resumo_fruta_propriedades)
+    AND r.id_visita IN (SELECT id_visita FROM public.resumo_fruta_visita_ult)   -- só a última visita do mês (como a planilha do SisATeG)
 ),
 q AS (
   SELECT id_propriedade, id_visita, id_item, dt_referencia, subgrupo, item,
@@ -274,6 +287,7 @@ WITH base AS (
     AND r.dt_referencia BETWEEN DATE '2024-06-01' AND DATE '2026-12-31'
     AND r.grupo IN ('Receita','Despesa')
     AND r.id_propriedade IN (SELECT id_propriedade FROM public.resumo_fruta_propriedades)
+    AND r.id_visita IN (SELECT id_visita FROM public.resumo_fruta_visita_ult)   -- só a última visita do mês (como a planilha do SisATeG)
 ),
 q AS (
   SELECT id_propriedade, id_visita, id_item, dt_referencia, grupo, subgrupo, item,
