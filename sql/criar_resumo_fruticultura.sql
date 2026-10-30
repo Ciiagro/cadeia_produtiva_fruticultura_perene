@@ -157,7 +157,7 @@ pr AS (
 ),
 v AS (
   SELECT q.id_propriedade, date_trunc('month', q.dt_referencia)::date AS mes,
-         q.fruta, q.safra_nome, q.grupo, q.subgrupo, q.item, q.qtd, q.qtd * pr.preco AS valor, q.id_visita::text AS id_visita
+         q.fruta, q.safra_nome, q.grupo, q.subgrupo, q.item, q.qtd, q.qtd * pr.preco AS valor
   FROM q JOIN pr USING (id_propriedade, grupo, id_visita, id_item, dt_referencia)
 ),
 tec_mes AS (  -- técnico responsável pela visita daquele mês (técnico da época)
@@ -179,14 +179,15 @@ fin AS (
     SUM(valor) FILTER (WHERE grupo = 'Receita'
          AND subgrupo NOT ILIKE 'Empr%' AND subgrupo NOT ILIKE 'Investimento%') AS receita_bruta,
     SUM(valor) FILTER (WHERE grupo = 'Despesa'
-         AND subgrupo NOT ILIKE 'Empr%' AND subgrupo NOT ILIKE 'Investimento%') AS despesa_total,
+         AND subgrupo NOT ILIKE 'Empr%' AND subgrupo NOT ILIKE 'Investimento%'
+         AND subgrupo NOT ILIKE 'Plantio (COE)%' AND subgrupo NOT ILIKE 'Manejo de Sombra%') AS despesa_total,
     SUM(valor) FILTER (WHERE grupo = 'Despesa'
          AND subgrupo NOT ILIKE 'Empr%' AND subgrupo NOT ILIKE 'Investimento%'
          AND subgrupo NOT ILIKE 'Forma%o e Recupera%' AND subgrupo NOT ILIKE 'M_o de obra familiar'
-         AND item NOT ILIKE 'M_o de obra familiar') AS despesa_direta,
+         AND item NOT ILIKE 'M_o de obra familiar'
+         AND subgrupo NOT ILIKE 'Plantio (COE)%' AND subgrupo NOT ILIKE 'Manejo de Sombra%') AS despesa_direta,
     SUM(valor) FILTER (WHERE grupo = 'Despesa' AND (item ILIKE 'M_o de obra familiar' OR subgrupo ILIKE 'M_o de obra familiar')) AS mao_obra_familiar,
-    SUM(valor) FILTER (WHERE grupo = 'Despesa' AND subgrupo ILIKE 'Forma%o e Recupera%') AS despesa_formacao,
-    string_agg(DISTINCT id_visita, ',' ORDER BY id_visita) AS id_visita   -- visita(s) do mês: para conferir com a planilha do SisATeG
+    SUM(valor) FILTER (WHERE grupo = 'Despesa' AND subgrupo ILIKE 'Forma%o e Recupera%') AS despesa_formacao
   FROM v GROUP BY 1,2,3,4
 )
 SELECT f.id_propriedade,
@@ -202,8 +203,7 @@ SELECT f.id_propriedade,
        f.despesa_direta AS despesa_direta,
        f.mao_obra_familiar AS mao_obra_familiar,
        f.despesa_formacao AS despesa_formacao,
-       f.despesa_total AS despesa_total,
-       f.id_visita AS id_visita
+       f.despesa_total AS despesa_total
 FROM fin f
 LEFT JOIN tec_mes t ON t.id_propriedade = f.id_propriedade AND t.mes = f.mes;
 
@@ -215,24 +215,18 @@ CREATE INDEX ON public.resumo_fruta_mensal_fruta (safra_nome);
 -- Mensal TOTAL (todas as frutas somadas): 1 linha por propriedade e mês, igual ao que o painel sempre usou.
 DROP TABLE IF EXISTS public.resumo_fruta_mensal;
 CREATE TABLE public.resumo_fruta_mensal AS
-WITH vis AS (  -- visitas do mês (todas as frutas), sem repetir
-  SELECT id_propriedade, mes, string_agg(DISTINCT u, ',' ORDER BY u) AS id_visita
-  FROM public.resumo_fruta_mensal_fruta, unnest(string_to_array(id_visita, ',')) u
-  GROUP BY 1, 2
-)
-SELECT m.id_propriedade, m.mes, MAX(m.tecnico) AS tecnico, MAX(vis.id_visita) AS id_visita,
-       ROUND(SUM(m.kg_vendidos)::numeric, 1)       AS kg_vendidos,
-       ROUND(SUM(m.unidades_vendidas)::numeric, 1) AS unidades_vendidas,
-       ROUND(SUM(m.venda_fruta_rs)::numeric, 2)    AS venda_fruta_rs,
-       ROUND(SUM(m.venda_kg_rs)::numeric, 2)       AS venda_kg_rs,
-       ROUND(SUM(m.receita_bruta)::numeric, 2)     AS receita_bruta,
-       ROUND(SUM(m.despesa_direta)::numeric, 2)    AS despesa_direta,
-       ROUND(SUM(m.mao_obra_familiar)::numeric, 2) AS mao_obra_familiar,
-       ROUND(SUM(m.despesa_formacao)::numeric, 2)  AS despesa_formacao,
-       ROUND(SUM(m.despesa_total)::numeric, 2)     AS despesa_total
-FROM public.resumo_fruta_mensal_fruta m
-LEFT JOIN vis ON vis.id_propriedade = m.id_propriedade AND vis.mes = m.mes
-GROUP BY m.id_propriedade, m.mes;
+SELECT id_propriedade, mes, MAX(tecnico) AS tecnico,
+       ROUND(SUM(kg_vendidos)::numeric, 1)       AS kg_vendidos,
+       ROUND(SUM(unidades_vendidas)::numeric, 1) AS unidades_vendidas,
+       ROUND(SUM(venda_fruta_rs)::numeric, 2)    AS venda_fruta_rs,
+       ROUND(SUM(venda_kg_rs)::numeric, 2)       AS venda_kg_rs,
+       ROUND(SUM(receita_bruta)::numeric, 2)     AS receita_bruta,
+       ROUND(SUM(despesa_direta)::numeric, 2)    AS despesa_direta,
+       ROUND(SUM(mao_obra_familiar)::numeric, 2) AS mao_obra_familiar,
+       ROUND(SUM(despesa_formacao)::numeric, 2)  AS despesa_formacao,
+       ROUND(SUM(despesa_total)::numeric, 2)     AS despesa_total
+FROM public.resumo_fruta_mensal_fruta
+GROUP BY id_propriedade, mes;
 
 CREATE INDEX ON public.resumo_fruta_mensal (id_propriedade);
 CREATE INDEX ON public.resumo_fruta_mensal (tecnico);
@@ -263,6 +257,7 @@ FROM q JOIN pr USING (id_propriedade, id_visita, id_item, dt_referencia)
 WHERE q.subgrupo NOT ILIKE 'Empr%' AND q.subgrupo NOT ILIKE 'Investimento%'
   AND q.subgrupo NOT ILIKE 'Forma%o e Recupera%' AND q.subgrupo NOT ILIKE 'M_o de obra familiar'
   AND q.item NOT ILIKE 'M_o de obra familiar'
+  AND q.subgrupo NOT ILIKE 'Plantio (COE)%' AND q.subgrupo NOT ILIKE 'Manejo de Sombra%'   -- o Total Despesas do SisATeG não conta esses tipos
 GROUP BY 1,2,3,4,5;
 CREATE INDEX ON public.resumo_fruta_despesa_subgrupo (id_propriedade, mes);
 
@@ -291,7 +286,8 @@ pr AS (
 ),
 v AS (
   SELECT q.id_propriedade, to_char(date_trunc('month', q.dt_referencia), 'YYYY-MM') AS mes, q.fruta, q.safra_nome, q.grupo, q.subgrupo,
-         CASE WHEN q.subgrupo ILIKE 'Empr%' OR q.subgrupo ILIKE 'Investimento%' THEN
+         CASE WHEN q.grupo = 'Despesa' AND (q.subgrupo ILIKE 'Plantio (COE)%' OR q.subgrupo ILIKE 'Manejo de Sombra%') THEN 'Fora do total (planilha)'   -- gasto real, mas o Total Despesas do SisATeG não conta
+              WHEN q.subgrupo ILIKE 'Empr%' OR q.subgrupo ILIKE 'Investimento%' THEN
                 CASE WHEN q.grupo = 'Receita' THEN 'Fora da receita bruta' ELSE 'Fora das despesas' END
               WHEN q.grupo = 'Receita' THEN 'Receita bruta'
               WHEN q.subgrupo ILIKE 'Forma%o e Recupera%' OR q.subgrupo ILIKE 'M_o de obra familiar'

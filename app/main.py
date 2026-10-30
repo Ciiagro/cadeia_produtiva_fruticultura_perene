@@ -507,7 +507,7 @@ def conferencia(mes: str = Query(..., description="YYYY-MM")):
                       WHERE mes = :m AND COALESCE(projeto, '') NOT ILIKE 'TREINAMENTO%' GROUP BY 1, 2, 3, 4
                       HAVING ABS(COALESCE(SUM(valor), 0)) > 0"""), {"m": mes}).mappings():
                 tipos.setdefault(r["id"], []).append([r["grupo"], r["classe"], r["subgrupo"], float(r["v"] or 0)])
-                if r["grupo"] == "Despesa":   # a planilha de fruta traz o TOTAL de despesas (com empréstimo, investimento, mão de obra familiar e formação)
+                if r["grupo"] == "Despesa" and r["classe"] != "Fora do total (planilha)":   # a planilha de fruta traz o TOTAL de despesas (com empréstimo, investimento, mão de obra familiar e formação)
                     desp_tot[r["id"]] = desp_tot.get(r["id"], 0.0) + float(r["v"] or 0)
                 if r["classe"] == "Fora da receita bruta":
                     fora[r["id"]] = fora.get(r["id"], 0.0) + float(r["v"] or 0)

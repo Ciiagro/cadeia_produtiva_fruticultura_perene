@@ -636,7 +636,7 @@ async function conferePlanilha(file){
     // explica a diferença: se é de receita, mostra a receita do painel por tipo; se é de despesa, a despesa por tipo (com o que o painel deixa fora da despesa direta); se é de produção, os litros
     const escH = s => String(s ?? '').replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
     const tiposD = d.tipos || {};
-    const rotClasse = {'Outras despesas': ' [fora da despesa direta]', 'Aleitamento (fora do total)': ' [fora do total]', 'Fora das despesas': ' [empréstimo/investimento: fora]', 'Fora da receita bruta': ' [fora da receita bruta]'};
+    const rotClasse = {'Outras despesas': ' [fora da despesa direta]', 'Aleitamento (fora do total)': ' [fora do total]', 'Fora do total (planilha)': ' [fora do total da planilha]', 'Fora das despesas': ' [empréstimo/investimento: fora]', 'Fora da receita bruta': ' [fora da receita bruta]'};
     const linhaTipo = (L, g) => L.filter(t => t[0] === g).map(t => `${t[2]} ${R(t[3])}${rotClasse[t[1]] ?? ''}`).join('; ') || 'nenhum lançamento';
     const oQue = (p, x) => {
       const L = tiposD[p.id] || [], partes = [];
