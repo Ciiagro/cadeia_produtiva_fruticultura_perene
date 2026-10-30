@@ -748,14 +748,15 @@ function desenhaMacro(){
   const gm = Object.fromEntries(grupos.map(g => [g.nome, g.m[met]]));
   const rankHtml = `<div class="rolagem" style="max-height:460px">` + vals.map((z, i) => { const m = gm[z.nome], x = m.dAno != null ? m.dAno : m.dMes;
     const reg = nivel === 'região';
-    return `<div class="rk"${reg ? ` data-reg="${z.nome}" style="cursor:pointer" title="Clique para ver os municípios desta região"` : ''}><div style="display:grid;grid-template-columns:24px minmax(90px,1.2fr) 2fr auto 52px 64px;gap:8px;align-items:center;padding:6px 2px;border-bottom:1px solid var(--linha,#eadfce);font-size:13px">
+    return `<div class="rk"${reg ? ` data-reg="${z.nome}" style="cursor:pointer" title="Clique para ver os municípios desta região"` : ''}><div style="display:grid;grid-template-columns:24px minmax(90px,1.2fr) 2fr auto 52px 92px;gap:8px;align-items:center;padding:6px 2px;border-bottom:1px solid var(--linha,#eadfce);font-size:13px">
       <span style="color:var(--mut)">${i + 1}º</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${z.nome}">${reg ? '▸ ' : ''}${z.nome}</b>
       <span style="background:#e9efe9;border-radius:4px;height:8px;display:block"><span style="display:block;height:8px;border-radius:4px;background:#1d6b45;width:${Math.max(2, z.cur / maxV * 100)}%"></span></span>
       <span style="text-align:right;font-variant-numeric:tabular-nums"><b>${fm(met, z.cur)}</b></span>
       <span style="text-align:right;color:var(--mut)" title="Participação no total">${fmt(z.cur / totV * 100, 1)}%</span>
-      <span style="text-align:right" title="${m.dAno != null ? 'vs. mesmo mês do ano anterior' : 'vs. mês anterior'}">${x != null ? seta(x) : '<span style="color:var(--mut)">novo</span>'}</span></div></div><div class="rk-sub" hidden></div>`; }).join('') + `</div>
+      <span style="text-align:right;white-space:nowrap" title="${m.dAno != null ? 'vs. mesmo mês do ano anterior' : 'vs. mês anterior'}">${x != null ? seta(x) : '<span style="color:var(--mut)">novo</span>'}</span></div></div><div class="rk-sub" hidden></div>`; }).join('') + `</div>
     <p class="d-resumo" style="margin-top:6px">Colunas: posição, ${nivel}, valor em ${ref}, participação no total e variação contra o mesmo mês do ano anterior.${nivel === 'região' ? ' <b>Clique numa região para ver os municípios dela.</b>' : ''}</p>`;
-  box.innerHTML = `<p class="d-resumo">Mês de referência: <b>${ref}</b> (último mês fechado). Por <b>${nivel}</b>${nivel === 'município' ? '' : ' — clique numa região da tabela para ver os municípios'}.</p>${avisos}
+  const volta = $('reg').value ? `<p style="margin:0 0 8px"><button type="button" id="mvolta" class="btn" style="grid-column:auto;padding:6px 12px">← Voltar para todas as regiões</button> <span class="d-resumo">Região atual: <b>${$('reg').value}</b></span></p>` : '';
+  box.innerHTML = volta + `<p class="d-resumo">Mês de referência: <b>${ref}</b> (último mês fechado). Por <b>${nivel}</b>${nivel === 'município' ? '' : ' — clique numa região da tabela para ver os municípios'}.</p>${avisos}
     <div class="kpis kpis5" style="margin-bottom:14px">${cards}</div>
     <div class="par2"><div>
     ${modoVal ? `<h3 class="c-tit">${MM[met]} por ${nivel} em ${ref}</h3><p class="d-resumo">Valor de cada ${nivel} no mês de referência, do maior para o menor.</p>` : `<h3 class="c-tit">Crescimento de ${MM[met].toLowerCase()} por ${nivel}: ${PERN[$('mper').value]}</h3>
@@ -788,6 +789,7 @@ function desenhaMacro(){
         : '<p class="d-vazio">Nenhum município com lançamento em ' + ref + '.</p>';
     } catch(e) { sub.innerHTML = '<p class="d-vazio">Não consegui carregar os municípios: ' + e.message + '</p>'; }
   });
+  if ($('mvolta')) $('mvolta').onclick = () => { $('mniv').value = 'regiao'; $('reg').value = ''; $('reg').onchange(); };
   box.querySelectorAll('td.lnk').forEach(td => td.onclick = () => { $('reg').value = td.dataset.reg; $('reg').onchange(); });
   box.querySelectorAll('th[data-mk]').forEach(th => th.onclick = () => { const k = th.dataset.mk; macroSort = {k, d: macroSort.k === k ? -macroSort.d : (k === 'nome' ? 1 : -1)}; desenhaMacro(); });
   if (!modoVal && ncres) charts.cc = new Chart($('cCres'), {type: 'bar',
