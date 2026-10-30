@@ -747,13 +747,14 @@ function desenhaMacro(){
   const maxV = vals.length ? vals[0].cur : 1, totV = vals.reduce((s, z) => s + z.cur, 0) || 1;
   const gm = Object.fromEntries(grupos.map(g => [g.nome, g.m[met]]));
   const rankHtml = `<div class="rolagem" style="max-height:460px">` + vals.map((z, i) => { const m = gm[z.nome], x = m.dAno != null ? m.dAno : m.dMes;
-    return `<div style="display:grid;grid-template-columns:24px minmax(90px,1.2fr) 2fr auto 52px 64px;gap:8px;align-items:center;padding:6px 2px;border-bottom:1px solid var(--linha,#eadfce);font-size:13px">
-      <span style="color:var(--mut)">${i + 1}º</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${z.nome}">${z.nome}</b>
+    const reg = nivel === 'região';
+    return `<div class="rk"${reg ? ` data-reg="${z.nome}" style="cursor:pointer" title="Clique para ver os municípios desta região"` : ''}><div style="display:grid;grid-template-columns:24px minmax(90px,1.2fr) 2fr auto 52px 64px;gap:8px;align-items:center;padding:6px 2px;border-bottom:1px solid var(--linha,#eadfce);font-size:13px">
+      <span style="color:var(--mut)">${i + 1}º</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${z.nome}">${reg ? '▸ ' : ''}${z.nome}</b>
       <span style="background:#e9efe9;border-radius:4px;height:8px;display:block"><span style="display:block;height:8px;border-radius:4px;background:#1d6b45;width:${Math.max(2, z.cur / maxV * 100)}%"></span></span>
       <span style="text-align:right;font-variant-numeric:tabular-nums"><b>${fm(met, z.cur)}</b></span>
       <span style="text-align:right;color:var(--mut)" title="Participação no total">${fmt(z.cur / totV * 100, 1)}%</span>
-      <span style="text-align:right" title="${m.dAno != null ? 'vs. mesmo mês do ano anterior' : 'vs. mês anterior'}">${x != null ? seta(x) : '<span style="color:var(--mut)">novo</span>'}</span></div>`; }).join('') + `</div>
-    <p class="d-resumo" style="margin-top:6px">Colunas: posição, ${nivel}, valor em ${ref}, participação no total e variação contra o mesmo mês do ano anterior.</p>`;
+      <span style="text-align:right" title="${m.dAno != null ? 'vs. mesmo mês do ano anterior' : 'vs. mês anterior'}">${x != null ? seta(x) : '<span style="color:var(--mut)">novo</span>'}</span></div></div><div class="rk-sub" hidden></div>`; }).join('') + `</div>
+    <p class="d-resumo" style="margin-top:6px">Colunas: posição, ${nivel}, valor em ${ref}, participação no total e variação contra o mesmo mês do ano anterior.${nivel === 'região' ? ' <b>Clique numa região para ver os municípios dela.</b>' : ''}</p>`;
   box.innerHTML = `<p class="d-resumo">Mês de referência: <b>${ref}</b> (último mês fechado). Por <b>${nivel}</b>${nivel === 'município' ? '' : ' — clique numa região da tabela para ver os municípios'}.</p>${avisos}
     <div class="kpis kpis5" style="margin-bottom:14px">${cards}</div>
     <div class="par2"><div>
@@ -770,6 +771,23 @@ function desenhaMacro(){
     <p class="d-resumo">Cada coluna de variação diz contra qual período compara. Só entram as propriedades que lançaram nos dois períodos; em <i>cinza itálico</i> está a variação do total quando nenhuma propriedade se repete, e <b>novo</b> quando não havia lançamento antes. O mês de referência é o campo <b>Até</b>.</p>${tabela}
     <details class="mini"><summary><b>Ver mapa de calor</b> (${MM[met].toLowerCase()} contra o mesmo mês do ano anterior, últimos 12 meses)</summary>
     <p class="d-resumo">Verde = cresceu, vermelho = caiu em relação ao mesmo mês do ano anterior (intensidade até ±50%). Cinza com “–” = sem lançamento no mês (não é queda de 100%).${usaLfl && (met === 'rec' || met === 'prod') ? ' Comparação só com as propriedades que lançaram nos dois meses.' : ''}${grupos.length > 40 ? ' Mostra os 40 maiores em ' + ref + '.' : ''}</p>${hm}</details>`;
+  box.querySelectorAll('.rk[data-reg]').forEach(row => row.onclick = async () => {
+    const sub = row.nextElementSibling, nm = row.dataset.reg;
+    if (!sub.hidden) { sub.hidden = true; row.querySelector('b').textContent = '▸ ' + nm; return; }
+    row.querySelector('b').textContent = '▾ ' + nm; sub.hidden = false; sub.innerHTML = '<p class="d-vazio">Carregando municípios…</p>';
+    try {
+      const q = new URLSearchParams({cadeia: 'fruta', nivel: 'municipio', regiao: nm, situacao: $('sit').value, ate: $('ate').value});
+      for (const [k, v] of [...q]) if (!v) q.delete(k);
+      const r = await fetch('/api/macro?' + q), dm = await r.json(), ix = dm.meses.indexOf(ref);
+      const L = (dm.grupos || []).map(g => ({nome: g.nome, cur: ix >= 0 ? (g[met][ix] || 0) : 0})).filter(z => z.cur).sort((a, b) => b.cur - a.cur);
+      const tt = L.reduce((s, z) => s + z.cur, 0) || 1, mx = L.length ? L[0].cur : 1;
+      sub.innerHTML = L.length ? L.map((z, i) => `<div style="display:grid;grid-template-columns:24px minmax(90px,1.2fr) 2fr auto 52px;gap:8px;align-items:center;padding:4px 2px 4px 22px;background:#f7faf7;border-bottom:1px solid var(--linha,#eadfce);font-size:12.5px">
+        <span style="color:var(--mut)">${i + 1}º</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${z.nome}">${z.nome}</span>
+        <span style="background:#e9efe9;border-radius:4px;height:6px;display:block"><span style="display:block;height:6px;border-radius:4px;background:#5d9b7a;width:${Math.max(2, z.cur / mx * 100)}%"></span></span>
+        <span style="text-align:right;font-variant-numeric:tabular-nums">${fm(met, z.cur)}</span><span style="text-align:right;color:var(--mut)" title="Participação na região">${fmt(z.cur / tt * 100, 1)}%</span></div>`).join('')
+        : '<p class="d-vazio">Nenhum município com lançamento em ' + ref + '.</p>';
+    } catch(e) { sub.innerHTML = '<p class="d-vazio">Não consegui carregar os municípios: ' + e.message + '</p>'; }
+  });
   box.querySelectorAll('td.lnk').forEach(td => td.onclick = () => { $('reg').value = td.dataset.reg; $('reg').onchange(); });
   box.querySelectorAll('th[data-mk]').forEach(th => th.onclick = () => { const k = th.dataset.mk; macroSort = {k, d: macroSort.k === k ? -macroSort.d : (k === 'nome' ? 1 : -1)}; desenhaMacro(); });
   if (!modoVal && ncres) charts.cc = new Chart($('cCres'), {type: 'bar',
