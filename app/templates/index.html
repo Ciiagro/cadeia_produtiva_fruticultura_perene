@@ -230,6 +230,7 @@
     <h2>Visão macro</h2>
     <div class="macro-ctl">
       <label>Comparar<select id="mmet" autocomplete="off"><option value="rec">Receita bruta</option><option value="prod">Kg vendidos</option><option value="vis">Visitas</option><option value="assist">Propriedades assistidas</option></select></label>
+      <label>Mostrar<select id="mgraf" autocomplete="off"><option value="valor">Valor no mês (ranking)</option><option value="cres">Crescimento</option></select></label>
       <label>Agrupar por<select id="mniv" autocomplete="off"><option value="municipio">Município (todos)</option><option value="regiao">Região</option></select></label>
     </div>
     <details class="avanc"><summary>Opções avançadas (região e período de crescimento)</summary>
@@ -517,7 +518,7 @@ async function atualiza(){
 }
 ['proj','sup','tec','reg','mun','fru','saf','sit','de','ate'].forEach(id => $(id).onchange = async () => { await carregaFiltros(); atualiza(); });
 $('mreg').onchange = () => { $('reg').value = $('mreg').value; $('reg').onchange(); };
-$('mniv').onchange = carregaMacro; $('mmet').onchange = desenhaMacro; $('mper').onchange = desenhaMacro; $('mbase').onchange = desenhaMacro;
+$('mniv').onchange = carregaMacro; $('mmet').onchange = desenhaMacro; $('mper').onchange = desenhaMacro; $('mgraf').onchange = desenhaMacro; $('mbase').onchange = desenhaMacro;
 $('prop').onchange=atualiza;
 $('btnAtualiza').onclick = async()=>{ await carregaFiltros(); atualiza(); };
 // Excel da tabela mensal: usa exatamente os dados na tela, ou seja, já respeitando todos os filtros
@@ -708,8 +709,10 @@ function desenhaMacro(){
   const per = $('mper').value;
   const semLanc = grupos.filter(g => !g.m[met].cur).map(g => g.nome);   // sem lançamento no mês de referência: não é queda, fica fora das barras
   const cres = grupos.filter(g => g.m[met].cur).map(g => ({nome: g.nome, x: g.m[met][per], cur: g.m[met].cur})).filter(z => z.x != null).sort((a, b) => b.x - a.x);
-  const semBase = grupos.filter(g => g.m[met].cur && g.m[met][per] == null).map(g => g.nome);   // lançaram no mês, mas sem propriedade comparável
-  const ncres = cres.length;
+  const semBase = $('mgraf').value === 'valor' ? [] : grupos.filter(g => g.m[met].cur && g.m[met][per] == null).map(g => g.nome);   // lançaram no mês, mas sem propriedade comparável
+  const modoVal = $('mgraf').value === 'valor';
+  const vals = grupos.filter(g => g.m[met].cur).map(g => ({nome: g.nome, cur: g.m[met].cur})).sort((a, b) => b.cur - a.cur);
+  const ncres = modoVal ? vals.length : cres.length;
   // ---- tabela comparativa
   const NM = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   const mt = m => m ? NM[+m.slice(5) - 1] + '/' + m.slice(2, 4) : '–';
@@ -744,8 +747,8 @@ function desenhaMacro(){
   box.innerHTML = `<p class="d-resumo">Mês de referência: <b>${ref}</b> (último mês fechado). Por <b>${nivel}</b>${nivel === 'município' ? '' : ' — clique numa região da tabela para ver os municípios'}.</p>${avisos}
     <div class="kpis kpis5" style="margin-bottom:14px">${cards}</div>
     <div class="par2"><div>
-    <h3 class="c-tit">Crescimento de ${MM[met].toLowerCase()} por ${nivel}: ${PERN[$('mper').value]}</h3>
-    <p class="d-resumo">Cada barra é um(a) ${nivel}: ${usaLfl && (met === 'rec' || met === 'prod') ? 'compara só as propriedades que lançaram nos dois meses, para não contar propriedade nova como crescimento.' : 'compara o total de cada mês.'}</p>
+    ${modoVal ? `<h3 class="c-tit">${MM[met]} por ${nivel} em ${ref}</h3><p class="d-resumo">Valor de cada ${nivel} no mês de referência, do maior para o menor.</p>` : `<h3 class="c-tit">Crescimento de ${MM[met].toLowerCase()} por ${nivel}: ${PERN[$('mper').value]}</h3>
+    <p class="d-resumo">Cada barra é um(a) ${nivel}: ${usaLfl && (met === 'rec' || met === 'prod') ? 'compara só as propriedades que lançaram nos dois meses, para não contar propriedade nova como crescimento.' : 'compara o total de cada mês.'}</p>`}
     ${semBase.length || semLancRef.length ? `<details class="mini"><summary>Quem não aparece nas barras (${semBase.length + semLancRef.length})</summary>${semBase.length ? `<p><b>Sem propriedade comparável (novas):</b> ${semBase.join(', ')}.</p>` : ''}${semLancRef.length ? `<p><b>Sem lançamento de fruticultura em ${ref} (fora do painel neste mês):</b> ${semLancRef.join(', ')}.</p>` : ''}</details>` : ''}
     <div class="cv" style="height:${Math.max(300, 22 * ncres + 70)}px"><canvas id="cCres"></canvas></div>
     </div><div>
@@ -759,7 +762,12 @@ function desenhaMacro(){
     <p class="d-resumo">Verde = cresceu, vermelho = caiu em relação ao mesmo mês do ano anterior (intensidade até ±50%). Cinza com “–” = sem lançamento no mês (não é queda de 100%).${usaLfl && (met === 'rec' || met === 'prod') ? ' Comparação só com as propriedades que lançaram nos dois meses.' : ''}${grupos.length > 40 ? ' Mostra os 40 maiores em ' + ref + '.' : ''}</p>${hm}</details>`;
   box.querySelectorAll('td.lnk').forEach(td => td.onclick = () => { $('reg').value = td.dataset.reg; $('reg').onchange(); });
   box.querySelectorAll('th[data-mk]').forEach(th => th.onclick = () => { const k = th.dataset.mk; macroSort = {k, d: macroSort.k === k ? -macroSort.d : (k === 'nome' ? 1 : -1)}; desenhaMacro(); });
-  if (ncres) charts.cc = new Chart($('cCres'), {type: 'bar',
+  if (modoVal && ncres) charts.cc = new Chart($('cCres'), {type: 'bar', plugins: [rotulosPontos({tipo: 'barraH', fmt: x => fm(met, Math.round(x))})],
+    data: {labels: vals.map(z => z.nome), datasets: [{data: vals.map(z => z.cur), backgroundColor: '#1d6b45', borderRadius: 3}]},
+    options: {indexAxis: 'y', maintainAspectRatio: false, animation: reduz ? false : undefined, layout: {padding: {right: 70}},
+      plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => fm(met, vals[c.dataIndex].cur)}}},
+      scales: {x: {ticks: {color: '#5a6a61', font: {size: 11}}}, y: {ticks: {color: '#15251c', font: {size: 11}, autoSkip: false}, grid: {display: false}}}}});
+  else if (ncres) charts.cc = new Chart($('cCres'), {type: 'bar',
     data: {labels: cres.map(z => z.nome), datasets: [{data: cres.map(z => Math.max(-300, Math.min(300, z.x))), backgroundColor: cres.map(z => z.x >= 0 ? '#1d6b45' : '#b3261e'), borderRadius: 3}]},
     options: {indexAxis: 'y', maintainAspectRatio: false, animation: reduz ? false : undefined,
       plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => (cres[c.dataIndex].x > 0 ? '+' : '') + fmt(cres[c.dataIndex].x, 1) + '%  (atual: ' + fm(met, cres[c.dataIndex].cur) + ')'}}},
