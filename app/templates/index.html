@@ -89,6 +89,9 @@
   .destaques h2{margin:0 0 6px;font-size:17px;font-weight:700}
   .d-resumo{margin:0 0 12px;font-size:14.5px;line-height:1.55}
   .d-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
+  .d-2col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px} .d-2col .d-bloco{margin:0;min-width:0}
+  .d-itens2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
+  @media(max-width:1000px){.d-2col,.d-itens2{grid-template-columns:1fr}}
   .d-bloco{background:var(--suave);border-radius:10px;padding:10px 12px}
   .d-bloco h3{margin:0 0 6px;font-size:13.5px;font-weight:600}
   .d-item{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--linha)}
@@ -546,28 +549,24 @@ async function carregaTipos(q){
   let d = {};
   try { d = await (await fetch('/api/tipos?' + q)).json(); } catch(e) { d = {}; }
   if (!d || !d.de) { box.innerHTML = '<p class="d-vazio">Sem dados para o filtro escolhido.</p>'; return; }
-  const kpi = (rot, v, cor) => `<div class="d-item"><span><b>${rot}</b></span><span class="${cor||''}"><b>${brl2(v)}</b></span></div>`;
-  const tab = (bl, vazio) => bl.itens.length ? `<div class="rolagem" style="max-height:340px"><table class="t-simples"><thead><tr><th>Tipo (subgrupo)</th><th class="n">Valor no período</th><th class="n">% do bloco</th></tr></thead><tbody>` +
+  // textos curtos e blocos lado a lado; a explicação de cada item fica na dica (ao passar o mouse)
+  const kpi = (rot, v, cor, dica) => `<div class="d-item"><span title="${dica || ''}"><b>${rot}</b></span><span class="${cor||''}"><b>${brl2(v)}</b></span></div>`;
+  const tab = (bl, vazio) => bl.itens.length ? `<div class="rolagem" style="max-height:280px"><table class="t-simples"><thead><tr><th>Tipo</th><th class="n">Valor</th><th class="n">%</th></tr></thead><tbody>` +
       bl.itens.map(x => `<tr><td>${x.nome}</td><td class="n">${brl2(x.valor)}</td><td class="n">${fmt(x.pct,1)}%</td></tr>`).join('') +
       `<tr><td><b>Total</b></td><td class="n"><b>${brl2(bl.total)}</b></td><td class="n"></td></tr></tbody></table></div>` : `<p class="d-vazio">${vazio || 'Nenhum lançamento.'}</p>`;
-  box.innerHTML = `<h2>Receitas e despesas por tipo: ${d.de} a ${d.ate}</h2>
-    <div class="d-bloco" style="margin-bottom:14px"><h3>Resumo do período</h3>
-      ${kpi('Receita bruta total', d.receita_bruta.total, 'pos')}
-      ${kpi('Despesa direta', d.despesa_direta.total, 'neg')}
-      ${kpi('Outras despesas (mão de obra familiar, formação e recuperação...)', d.despesa_outras.total)}
-      ${kpi('Investimento e pagamento de empréstimo', d.despesa_fora.total)}
-      ${kpi('Total de despesas (soma de tudo)', d.despesa_total, 'neg')}
-      ${kpi('Margem bruta (receita bruta − despesa direta)', d.margem_bruta, d.margem_bruta >= 0 ? 'pos' : 'neg')}
-    </div>
-    <h3 class="c-tit">Receita bruta por tipo</h3>
-    <p class="d-resumo">Tudo que entrou na atividade (venda de fruta, mudas, subprodutos e outras), sem empréstimo nem investimento.</p>${tab(d.receita_bruta)}
-    <h3 class="c-tit">Despesa direta por tipo</h3>
-    <p class="d-resumo">As despesas que entram no cálculo da margem bruta.</p>${tab(d.despesa_direta)}
-    <h3 class="c-tit">Outras despesas (não entram na despesa direta)</h3>
-    <p class="d-resumo">Mão de obra familiar e formação e recuperação da lavoura (pomar novo). Somadas à despesa direta (e ao investimento) formam o <b>total de despesas</b>.</p>${tab(d.despesa_outras)}
-    <h3 class="c-tit">Investimento e empréstimo</h3>
-    <p class="d-resumo">Não entram na despesa direta nem na receita bruta (margem), mas a <b>soma de todas as despesas</b> inclui o investimento e o pagamento de empréstimo, como no Total Despesas do SisATeG. Total geral de receitas (com venda de bem e recebimento de empréstimo): <b>${brl2(d.receita_total)}</b>.</p>
-    <div class="d-grid"><div class="d-bloco"><h3>Despesas: investimento e pagamento de empréstimo</h3>${tab(d.despesa_fora)}</div><div class="d-bloco"><h3>Receitas: venda de bem e recebimento de empréstimo</h3>${tab(d.receita_fora)}</div></div>`;
+  const bloco = (t, dica, html) => `<div class="d-bloco"><h3 title="${dica}">${t}</h3>${html}</div>`;
+  box.innerHTML = `<h2>Receitas e despesas: ${d.de} a ${d.ate}</h2>
+    <div class="d-bloco" style="margin-bottom:14px"><h3>Resumo do período</h3><div class="d-itens2">
+      ${kpi('Receita bruta', d.receita_bruta.total, 'pos', 'Venda de fruta, mudas, subprodutos e outras receitas, sem empréstimo nem investimento')}
+      ${kpi('Despesa direta', d.despesa_direta.total, 'neg', 'Despesas que entram no cálculo da margem bruta')}
+      ${kpi('Margem bruta', d.margem_bruta, d.margem_bruta >= 0 ? 'pos' : 'neg', 'Receita bruta menos despesa direta')}
+      ${kpi('Outras despesas', d.despesa_outras.total, '', 'Mão de obra familiar e formação e recuperação da lavoura (pomar novo)')}
+      ${kpi('Investimento e empréstimo', d.despesa_fora.total, '', 'Aquisição de bem e pagamento de empréstimo')}
+      ${kpi('Total de despesas', d.despesa_total, 'neg', 'Direta + outras + investimento e empréstimo (como o Total Despesas do SisATeG)')}
+    </div></div>
+    <div class="d-2col">${bloco('Receita bruta', 'Venda de fruta, mudas, subprodutos e outras, sem empréstimo nem investimento', tab(d.receita_bruta))}${bloco('Despesa direta', 'As despesas que entram no cálculo da margem bruta', tab(d.despesa_direta))}</div>
+    <div class="d-2col">${bloco('Outras despesas', 'Mão de obra familiar e formação e recuperação da lavoura. Não entram na despesa direta, mas somam no total de despesas', tab(d.despesa_outras))}${bloco('Investimento e empréstimo', 'Não entram na despesa direta, mas somam no total de despesas', tab(d.despesa_fora))}</div>
+    <div class="d-2col">${bloco('Receitas fora da receita bruta', 'Venda de bem e recebimento de empréstimo', tab(d.receita_fora))}<div></div></div>`;
 }
 // ---- Aba "Conferência" (igual à da Bovinocultura; compara receita, despesa e kg vendidos)
 // ---- Aba "Conferência": compara a planilha do SisATeG (um mês) com o painel, por propriedade
