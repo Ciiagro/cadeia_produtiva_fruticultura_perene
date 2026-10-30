@@ -80,6 +80,12 @@
   .macro-ctl{display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 14px}
   .macro-ctl label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--verde-esc)} .macro-ctl select{min-width:260px}
   .mini{font-size:13px;margin:0 0 8px;color:var(--mut)} .mini summary{cursor:pointer}
+  .avanc{margin:0 0 12px;font-size:13.5px} .avanc summary{cursor:pointer;color:var(--mut);padding:4px 0}
+  .hm{border-collapse:separate;border-spacing:2px;font-size:12px;width:100%} .hm th{font-size:11px;color:var(--mut);font-weight:600;padding:2px}
+  .hm td{text-align:center;padding:7px 2px;border-radius:4px;min-width:46px;font-variant-numeric:tabular-nums} .hm td.hn{text-align:left;font-weight:600;white-space:nowrap;padding-right:10px;min-width:150px}
+  @media(min-width:900px){.kpis.kpis5{grid-template-columns:repeat(5,minmax(0,1fr))}}
+  .kpis.kpis5>.kpi{grid-column:auto !important}   /* cartões da Visão macro: 5 por linha */
+  @media(max-width:899px){.kpis.kpis5{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .abas{display:flex;gap:8px;background:var(--surf);border:1px solid var(--linha);border-radius:14px;padding:8px;margin:0 0 18px;overflow-x:auto;box-shadow:0 2px 10px rgba(120,60,5,.12)}
   .aba{display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:1 1 0;border:1.5px solid transparent;background:#fdf0dc;padding:13px 20px;font:inherit;font-size:16px;font-weight:700;color:var(--verde-esc);cursor:pointer;white-space:nowrap;border-radius:10px;transition:background .15s,color .15s,box-shadow .15s}
   .aba svg{width:20px;height:20px}
@@ -211,6 +217,7 @@
   <div class="ficha" id="ficha" style="display:none"></div>
   <div class="kpis" id="kpis"></div>
   <nav class="abas" role="tablist" aria-label="Seções do painel">
+    <button type="button" role="tab" class="aba" data-aba="macro" aria-selected="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>Visão macro</button>
     <button type="button" role="tab" class="aba on" data-aba="graficos" aria-selected="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Gráficos</button>
     <button type="button" role="tab" class="aba" data-aba="destaques" aria-selected="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>Destaques do mês</button>
     <button type="button" role="tab" class="aba" data-aba="causas" aria-selected="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Causas</button>
@@ -219,6 +226,21 @@
     <button type="button" role="tab" class="aba" data-aba="tabela" aria-selected="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>Tabela mensal</button>
   </nav>
   <section class="destaques" id="destaques" hidden></section>
+  <section class="destaques" id="macro" hidden>
+    <h2>Visão macro</h2>
+    <div class="macro-ctl">
+      <label>Comparar<select id="mmet" autocomplete="off"><option value="rec">Receita bruta</option><option value="prod">Kg vendidos</option><option value="vis">Visitas</option><option value="assist">Propriedades assistidas</option></select></label>
+      <label>Agrupar por<select id="mniv" autocomplete="off"><option value="municipio">Município (todos)</option><option value="regiao">Região</option></select></label>
+    </div>
+    <details class="avanc"><summary>Opções avançadas (região e período de crescimento)</summary>
+    <div class="macro-ctl">
+      
+      <label>Região<select id="mreg" autocomplete="off"><option value="">Todas (agrupa pela escolha ao lado)</option></select></label>
+      <label hidden>Base de comparação<select id="mbase" autocomplete="off"><option value="lfl">Mesmas propriedades (só as que lançaram nos dois meses)</option><option value="todas">Todas as propriedades</option></select></label>
+      <label>Crescimento<select id="mper" autocomplete="off"><option value="dAno">Mês contra o mesmo mês do ano anterior</option><option value="dMes">Mês contra o mês anterior</option><option value="dTri">Trimestre contra o mesmo trimestre do ano anterior</option></select></label>
+    </div></details>
+    <div id="macroCorpo"><p class="d-vazio">Carregando…</p></div>
+  </section>
   <section class="destaques" id="causas" hidden></section>
   <section class="destaques" id="tipos" hidden></section>
   <section class="destaques" id="conf" hidden>
@@ -412,7 +434,8 @@ function carregaPendentes(nome){
   if (!cargaAba || !cargaAba.pendentes.has(nome)) return;
   cargaAba.pendentes.delete(nome);
   const {q, parcial} = cargaAba;
-  if (nome === 'destaques') carregaDestaques(q, parcial);
+  if (nome === 'macro') carregaMacro();
+  else if (nome === 'destaques') carregaDestaques(q, parcial);
   else if (nome === 'causas') carregaCausas(q);
   else if (nome === 'tipos') carregaTipos(q);
 }
@@ -454,7 +477,7 @@ async function atualiza(){
     cartao('Unidades vendidas', nf.format(ult.unidades||0), ult.var_unidades_pct, d.map(x=>x.unidades), 'var(--c-un)', 'gota'),
     cartao('Unidades vendidas por produtor', nf.format(ult.unidades_media_produtor||0), ult.var_un_media_pct, d.map(x=>x.unidades_media_produtor), 'var(--c-un)', 'pessoas')
   ].join('') : '<p>Sem dados para o filtro.</p>';
-  cargaAba = {q, parcial, pendentes: new Set(['destaques', 'causas', 'tipos'])};
+  cargaAba = {q, parcial, pendentes: new Set(['macro', 'destaques', 'causas', 'tipos'])};
   carregaPendentes(abaAtual);
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   const soma = f => d.reduce((a,x)=>a+(+x[f]||0),0), media = f => { const v = d.map(x=>x[f]).filter(z=>z!=null); return v.length ? v.reduce((a,z)=>a+z,0)/v.length : null; };
@@ -493,6 +516,8 @@ async function atualiza(){
       `<td class="sep">${nf.format(x.producao_media_produtor)}</td><td>${pct(x.var_prod_media_pct)}</td></tr>`).join('') + '</tbody>';
 }
 ['proj','sup','tec','reg','mun','fru','saf','sit','de','ate'].forEach(id => $(id).onchange = async () => { await carregaFiltros(); atualiza(); });
+$('mreg').onchange = () => { $('reg').value = $('mreg').value; $('reg').onchange(); };
+$('mniv').onchange = carregaMacro; $('mmet').onchange = desenhaMacro; $('mper').onchange = desenhaMacro; $('mbase').onchange = desenhaMacro;
 $('prop').onchange=atualiza;
 $('btnAtualiza').onclick = async()=>{ await carregaFiltros(); atualiza(); };
 // Excel da tabela mensal: usa exatamente os dados na tela, ou seja, já respeitando todos os filtros
@@ -597,6 +622,158 @@ async function carregaTipos(q){
     </div>`;
 }
 // ---- Aba "Conferência" (igual à da Bovinocultura; compara receita, despesa e kg vendidos)
+// ---- Aba "Visão macro": propriedades, visitas, receita e produção, comparando regiões (ou municípios de uma região) no tempo
+let macroDados = null, macroSort = {k: 'recAno', d: -1};
+const MM = {rec: 'Receita bruta', prod: 'Kg vendidos', vis: 'Visitas', assist: 'Propriedades assistidas'};
+const PERN = {dAno: 'mês contra o mesmo mês do ano anterior', dMes: 'mês contra o mês anterior', dTri: 'trimestre contra o mesmo trimestre do ano anterior'};
+const MCOR = ['#1d6b45', '#2b59a8', '#c9730a', '#a23b72', '#0b7a80', '#7a5ba6', '#c0392b', '#4a5d52'];
+async function carregaMacro(){
+  const q = new URLSearchParams({cadeia: 'fruta', nivel: $('mniv').value, regiao: $('reg').value, situacao: $('sit').value, ate: $('ate').value});
+  for (const [k, v] of [...q]) if (!v) q.delete(k);
+  try { const r = await fetch('/api/macro?' + q); macroDados = r.ok ? await r.json() : {erro: 'HTTP ' + r.status + ' (veja o terminal do painel)'}; } catch(e) { macroDados = {erro: String(e)}; }
+  try { desenhaMacro(); } catch(e) { $('macroCorpo').innerHTML = '<p class="d-vazio">Erro ao desenhar a visão macro: ' + e.message + '</p>'; }
+}
+function sincronizaRegiaoMacro(){
+  const g = $('reg'), m = $('mreg'); if (!g || !m) return;
+  if (m.options.length !== g.options.length || m.value !== g.value) {
+    m.length = 1; [...g.options].slice(1).forEach(o => m.add(new Option(o.text, o.value))); m.value = g.value;
+  }
+}
+function desenhaMacro(){
+  sincronizaRegiaoMacro();
+  const box = $('macroCorpo'); let d = macroDados;
+  ['cm', 'cc'].forEach(k => { if (charts[k]) { charts[k].destroy(); delete charts[k]; } });
+  const avisos = d && d.avisos ? d.avisos.map(a => `<p class="d-vazio">⚠ ${a}</p>`).join('') : '';
+  if (d && d.erro) { box.innerHTML = '<p class="d-vazio">Não foi possível carregar a visão macro: ' + d.erro + '</p>'; return; }
+  if (!d || !d.meses || !d.meses.length) { box.innerHTML = '<p class="d-vazio">Sem dados para o filtro escolhido.</p>' + avisos; return; }
+  const meses = d.meses, de = $('de').value, unid = d.unidade, nivel = d.nivel;
+  const hoje = new Date(), atual = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+  let ri = meses.length - 1;
+  while (ri > 0 && $('ate').value && meses[ri] > $('ate').value) ri--;
+  if (meses[ri] === atual && ri > 0) ri--;              // mês em andamento fica de fora das comparações
+  const ref = meses[ri];
+  // só entram municípios/regiões com lançamento de receita ou produção no mês de referência; os outros ficam numa lista recolhida
+  const temLanc = g => (g.rec && g.rec[ri]) || (g.prod && g.prod[ri]);
+  const semLancRef = d.grupos.filter(g => !temLanc(g)).map(g => g.nome).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  d = {...d, grupos: d.grupos.filter(temLanc)};
+  if (!d.grupos.length) { box.innerHTML = '<p class="d-vazio">Nenhum lançamento em ' + ref + ' para o filtro escolhido.</p>' + avisos; return; }
+  const v = (a, i) => (i >= 0 && i < a.length && a[i] != null) ? a[i] : 0;
+  const soma = (a, i, n) => { let s = 0; for (let k = 0; k < n; k++) s += v(a, i - k); return s; };
+  const pct = (a, b) => b ? Math.round((a / b - 1) * 1000) / 10 : null;
+  const F = ['rec', 'prod', 'vis', 'assist', 'props'];
+  const usaLfl = $('mbase').value === 'lfl';
+  const zeros = () => meses.map(() => 0);
+  // l = {"1":{cur,base}, "12":{cur,base}} (só receita e produção); sem l, compara os totais de cada mês
+  const calc0 = (a, l) => { const cur = v(a, ri);
+    if (l && !cur) return {cur, dMes: null, ano: null, dAno: null, delta: null, dTri: null};   // sem lançamento no mês: não é queda de 100%
+    if (usaLfl && l) {
+      const c1 = l['1'], c12 = l['12'], s3 = x => soma(x, ri, 3);
+      return {cur, dMes: ri >= 1 ? pct(c1.cur[ri], c1.base[ri]) : null, ano: ri >= 12 ? c12.base[ri] : null,
+        dAno: ri >= 12 ? pct(c12.cur[ri], c12.base[ri]) : null, delta: ri >= 12 ? c12.cur[ri] - c12.base[ri] : null,
+        dTri: ri >= 14 ? pct(s3(c12.cur), s3(c12.base)) : null};
+    }
+    return {cur, dMes: pct(cur, v(a, ri - 1)), ano: ri >= 12 ? v(a, ri - 12) : null, delta: ri >= 12 ? cur - v(a, ri - 12) : null,
+      dAno: ri >= 12 ? pct(cur, v(a, ri - 12)) : null, dTri: ri >= 14 ? pct(soma(a, ri, 3), soma(a, ri - 12, 3)) : null}; };
+  // além da comparação "mesmas propriedades", guarda a variação do total (usada em cinza quando não há propriedade em comum)
+  const calc = (a, l) => { const r = calc0(a, l);
+    if (l && r.cur) { r.tMes = pct(r.cur, v(a, ri - 1)); r.tAno = ri >= 12 ? pct(r.cur, v(a, ri - 12)) : null; r.tTri = ri >= 14 ? pct(soma(a, ri, 3), soma(a, ri - 12, 3)) : null; }
+    return r; };
+  const lflG = (g, f) => g.lfl && g.lfl[f] ? g.lfl[f] : null;
+  const grupos = d.grupos.map(g => { const m = {}; F.forEach(f => m[f] = calc(g[f], lflG(g, f))); return {...g, m}; });
+  const tot = {}; F.forEach(f => tot[f] = meses.map((_, i) => d.grupos.reduce((s, g) => s + v(g[f], i), 0)));
+  const totL = {}; ['rec', 'prod'].forEach(f => { totL[f] = {}; ['1', '12'].forEach(o => { totL[f][o] = {cur: zeros(), base: zeros()};
+    d.grupos.forEach(g => { const l = lflG(g, f); if (l) meses.forEach((_, i) => { totL[f][o].cur[i] += l[o].cur[i]; totL[f][o].base[i] += l[o].base[i]; }); }); }); });
+  const T = {}; F.forEach(f => T[f] = calc(tot[f], totL[f]));
+  const cadTotal = d.grupos.reduce((s, g) => s + (g.cadastro || 0), 0);
+  const fm = (f, x) => f === 'rec' ? 'R$ ' + nf.format(x) : nf.format(x) + (f === 'prod' && unid ? ' ' + unid : '');
+  const vs = x => x.dAno != null ? seta(x.dAno) + ' vs. mesmo mês do ano anterior' : seta(x.dMes) + ' vs. mês anterior';
+  const card = (rot, valor, sub, ic, cor, serie) => `<div class="kpi"><div class="k-topo">${icoGrande(ic, cor)}<span class="k-rot">${rot}</span></div><b>${valor}</b><div class="k-var">${sub}</div>${serie ? spark(serie.slice(0, ri + 1), cor) : ''}</div>`;
+  const cards = [
+    card('Propriedades cadastradas', nf.format(cadTotal), `${nf.format(T.props.cur)} com lançamento em ${ref}`, 'casa', '#4a5d52', tot.props),
+    card('Propriedades assistidas', nf.format(T.assist.cur), vs(T.assist), 'pessoas', '#7a5ba6', tot.assist),
+    card('Visitas', nf.format(T.vis.cur), vs(T.vis), 'calc', '#c9730a', tot.vis),
+    card('Receita bruta', 'R$ ' + nf.format(T.rec.cur), vs(T.rec), 'moedas', '#1d6b45', tot.rec),
+    unid ? card('Kg vendidos', fm('prod', T.prod.cur), vs(T.prod), 'gota', '#2b59a8', tot.prod) : ''
+  ].join('');
+  let met = $('mmet').value;
+  if (met === 'prod' && !unid) met = 'rec';
+  const dlMet = (g) => g.m[met];
+  // ---- quem mais cresceu / mais caiu (variação absoluta contra o mesmo mês do ano anterior)
+  const comp = grupos.filter(g => dlMet(g).ano != null && dlMet(g).dAno != null).map(g => ({nome: g.nome, delta: dlMet(g).delta, pct: dlMet(g).dAno, cur: dlMet(g).cur}));
+  const sobe = comp.filter(x => x.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 4);
+  const cai = comp.filter(x => x.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 4);
+  const lista = (l, vazio) => l.length ? l.map(x => `<div class="d-item"><span>${x.nome}</span><span>${(x.delta > 0 ? '+' : '−') + fm(met, Math.abs(x.delta))} ${x.pct != null ? seta(x.pct) : ''}</span></div>`).join('') : `<p class="d-vazio">${vazio}</p>`;
+  const destaques = `<div class="d-grid"><div class="d-bloco"><h3>Onde mais cresceu (${MM[met]}, ${ref} vs. ${ri >= 12 ? meses[ri - 12] : '–'})</h3>${lista(sobe, 'Nenhum crescimento no comparativo.')}</div>
+     <div class="d-bloco"><h3>Onde mais caiu (${MM[met]}, ${ref} vs. ${ri >= 12 ? meses[ri - 12] : '–'})</h3>${lista(cai, 'Nenhuma queda no comparativo.')}</div></div>`;
+  const per = $('mper').value;
+  const semLanc = grupos.filter(g => !g.m[met].cur).map(g => g.nome);   // sem lançamento no mês de referência: não é queda, fica fora das barras
+  const cres = grupos.filter(g => g.m[met].cur).map(g => ({nome: g.nome, x: g.m[met][per], cur: g.m[met].cur})).filter(z => z.x != null).sort((a, b) => b.x - a.x);
+  const semBase = grupos.filter(g => g.m[met].cur && g.m[met][per] == null).map(g => g.nome);   // lançaram no mês, mas sem propriedade comparável
+  const ncres = cres.length;
+  // ---- tabela comparativa
+  const NM = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const mt = m => m ? NM[+m.slice(5) - 1] + '/' + m.slice(2, 4) : '–';
+  const mAnt = ri >= 1 ? mt(meses[ri - 1]) : '–', mAno = ri >= 12 ? mt(meses[ri - 12]) : '–';
+  const triAtual = ri >= 2 ? mt(meses[ri - 2]).slice(0, 3) + '–' + mt(meses[ri]) : '–', triAnt = ri >= 14 ? mt(meses[ri - 14]).slice(0, 3) + '–' + mt(meses[ri - 12]) : '–';
+  const colunas = [['nome', nivel === 'região' ? 'Região' : 'Município'], ['cad', 'Propriedades cadastradas'], ['props', 'Com lançamento'], ['assist', 'Assistidas'], ['vis', 'Visitas'],
+    ['rec', `Receita bruta<br>${mt(meses[ri])}`], ['recMes', `Receita<br>${mt(meses[ri])} vs ${mAnt}`], ['recAno', `Receita<br>${mt(meses[ri])} vs ${mAno}`], ['recTri', `Receita<br>${triAtual} vs ${triAnt}`], ...(unid ? [['prod', 'Produção'], ['prodAno', `Produção<br>${mt(meses[ri])} vs ${mAno}`]] : [])];
+  const chave = (g, k) => ({nome: g.nome, cad: g.cadastro, props: g.m.props.cur, assist: g.m.assist.cur, vis: g.m.vis.cur, rec: g.m.rec.cur, recMes: g.m.rec.dMes,
+      recAno: g.m.rec.dAno, recTri: g.m.rec.dTri, prod: g.m.prod.cur, prodAno: g.m.prod.dAno})[k];
+  const ord = [...grupos].sort((a, b) => { const x = chave(a, macroSort.k), y = chave(b, macroSort.k);
+      if (macroSort.k === 'nome') return macroSort.d * String(x).localeCompare(String(y), 'pt-BR');
+      return macroSort.d * ((x == null ? -1e18 : x) - (y == null ? -1e18 : y)); });
+  const sb = (x, m, k) => { if (x != null || !m.cur) return seta(x);
+    const t = m[k]; if (t != null) return `<span style="opacity:.6;font-style:italic" title="Nenhuma propriedade lançou nos dois períodos: esta é a variação do TOTAL, com propriedades diferentes">${seta(t)}</span>`;
+    return '<span style="color:var(--mut)" title="Sem lançamento no período anterior (projeto ou propriedades novas): não dá para calcular o crescimento">novo</span>'; };
+  const linha = (nome, g, b) => `<tr${b ? ' style="font-weight:700;background:var(--suave)"' : ''}><td${!b && nivel === 'região' ? ` class="lnk" data-reg="${nome}" style="cursor:pointer;text-decoration:underline dotted" title="Ver os municípios desta região"` : ''}>${nome}</td><td class="n">${nf.format(g.cad)}</td><td class="n">${nf.format(g.m.props.cur)}</td><td class="n">${nf.format(g.m.assist.cur)}</td>
+     <td class="n">${nf.format(g.m.vis.cur)}</td><td class="n">R$ ${nf.format(g.m.rec.cur)}</td><td class="n">${sb(g.m.rec.dMes, g.m.rec, 'tMes')}</td><td class="n">${sb(g.m.rec.dAno, g.m.rec, 'tAno')}</td><td class="n">${sb(g.m.rec.dTri, g.m.rec, 'tTri')}</td>
+     ${unid ? `<td class="n">${nf.format(g.m.prod.cur)}</td><td class="n">${sb(g.m.prod.dAno, g.m.prod, 'tAno')}</td>` : ''}</tr>`;
+  const tabela = `<div class="rolagem" style="max-height:460px"><table class="t-simples"><thead><tr>${colunas.map(([k, r]) => `<th class="${k === 'nome' ? '' : 'n'}" data-mk="${k}" style="cursor:pointer" title="Ordenar">${r}${macroSort.k === k ? (macroSort.d > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody>` +
+    linha('Total', {cadastro: cadTotal, cad: cadTotal, m: T}, true) + ord.map(g => linha(g.nome, {...g, cad: g.cadastro}, false)).join('') + `</tbody></table></div>`;
+  // ---- mapa de calor: variação contra o mesmo mês do ano anterior, últimos 12 meses
+  const ini = Math.max(12, ri - 11), idx = []; for (let i = ini; i <= ri; i++) idx.push(i);
+  const cinza = '<td style="background:#e6e9e7;color:#7a877f" title="Sem lançamento neste mês">–</td>';
+  const cel = (x, vazio) => { if (vazio) return cinza; if (x == null) return '<td title="Sem propriedades comparáveis nos dois meses" style="background:#f4f6f5"></td>'; const a = Math.min(Math.abs(x), 50) / 50, cor = x >= 0 ? '29,107,69' : '179,38,30';
+      return `<td style="background:rgba(${cor},${(0.12 + a * 0.7).toFixed(2)});color:${a > .55 ? '#fff' : 'var(--ink)'}">${x > 0 ? '+' : ''}${Math.round(x)}%</td>`; };
+  const hmGr = [...grupos].sort((a, b) => v(b[met], ri) - v(a[met], ri)).slice(0, 40);   // mapa de calor: os 40 maiores no mês de referência
+  const hm = idx.length ? `<div class="rolagem"><table class="hm"><thead><tr><th></th>${idx.map(i => `<th>${meses[i]}</th>`).join('')}</tr></thead><tbody>` +
+    hmGr.map(g => `<tr><td class="hn">${g.nome}</td>${idx.map(i => { const l = lflG(g, met);
+      if (!v(g[met], i)) return cel(null, true);
+      return cel(usaLfl && l ? pct(l['12'].cur[i], l['12'].base[i]) : pct(v(g[met], i), v(g[met], i - 12))); }).join('')}</tr>`).join('') +
+    `</tbody></table></div>` : '<p class="d-vazio">São necessários pelo menos 13 meses de histórico para comparar com o ano anterior.</p>';
+  box.innerHTML = `<p class="d-resumo">Mês de referência: <b>${ref}</b> (último mês fechado). Por <b>${nivel}</b>${nivel === 'município' ? '' : ' — clique numa região da tabela para ver os municípios'}.</p>${avisos}
+    <div class="kpis kpis5" style="margin-bottom:14px">${cards}</div>
+    <div class="par2"><div>
+    <h3 class="c-tit">Crescimento de ${MM[met].toLowerCase()} por ${nivel}: ${PERN[$('mper').value]}</h3>
+    <p class="d-resumo">Cada barra é um(a) ${nivel}: ${usaLfl && (met === 'rec' || met === 'prod') ? 'compara só as propriedades que lançaram nos dois meses, para não contar propriedade nova como crescimento.' : 'compara o total de cada mês.'}</p>
+    ${semBase.length || semLancRef.length ? `<details class="mini"><summary>Quem não aparece nas barras (${semBase.length + semLancRef.length})</summary>${semBase.length ? `<p><b>Sem propriedade comparável (novas):</b> ${semBase.join(', ')}.</p>` : ''}${semLancRef.length ? `<p><b>Sem lançamento de fruticultura em ${ref} (fora do painel neste mês):</b> ${semLancRef.join(', ')}.</p>` : ''}</details>` : ''}
+    <div class="cv" style="height:${Math.max(300, 22 * ncres + 70)}px"><canvas id="cCres"></canvas></div>
+    </div><div>
+    <h3 class="c-tit">Evolução de ${MM[met].toLowerCase()} por ${nivel}</h3>
+    <p class="d-resumo">Os 8 maiores no período De/Até.</p>
+    <div class="cv" style="height:${Math.max(300, Math.min(22 * ncres + 70, 520))}px"><canvas id="cMacro"></canvas></div>
+    </div></div>
+    <h3 class="c-tit">Tabela comparativa (clique no título da coluna para ordenar)</h3>
+    <p class="d-resumo">Cada coluna de variação diz contra qual período compara. Só entram as propriedades que lançaram nos dois períodos; em <i>cinza itálico</i> está a variação do total quando nenhuma propriedade se repete, e <b>novo</b> quando não havia lançamento antes. O mês de referência é o campo <b>Até</b>.</p>${tabela}
+    <details class="mini"><summary><b>Ver mapa de calor</b> (${MM[met].toLowerCase()} contra o mesmo mês do ano anterior, últimos 12 meses)</summary>
+    <p class="d-resumo">Verde = cresceu, vermelho = caiu em relação ao mesmo mês do ano anterior (intensidade até ±50%). Cinza com “–” = sem lançamento no mês (não é queda de 100%).${usaLfl && (met === 'rec' || met === 'prod') ? ' Comparação só com as propriedades que lançaram nos dois meses.' : ''}${grupos.length > 40 ? ' Mostra os 40 maiores em ' + ref + '.' : ''}</p>${hm}</details>`;
+  box.querySelectorAll('td.lnk').forEach(td => td.onclick = () => { $('reg').value = td.dataset.reg; $('reg').onchange(); });
+  box.querySelectorAll('th[data-mk]').forEach(th => th.onclick = () => { const k = th.dataset.mk; macroSort = {k, d: macroSort.k === k ? -macroSort.d : (k === 'nome' ? 1 : -1)}; desenhaMacro(); });
+  if (ncres) charts.cc = new Chart($('cCres'), {type: 'bar',
+    data: {labels: cres.map(z => z.nome), datasets: [{data: cres.map(z => Math.max(-300, Math.min(300, z.x))), backgroundColor: cres.map(z => z.x >= 0 ? '#1d6b45' : '#b3261e'), borderRadius: 3}]},
+    options: {indexAxis: 'y', maintainAspectRatio: false, animation: reduz ? false : undefined,
+      plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => (cres[c.dataIndex].x > 0 ? '+' : '') + fmt(cres[c.dataIndex].x, 1) + '%  (atual: ' + fm(met, cres[c.dataIndex].cur) + ')'}}},
+      scales: {x: {ticks: {color: '#5a6a61', font: {size: 11}, callback: x => x + '%'}}, y: {ticks: {color: '#15251c', font: {size: 11}, autoSkip: false}, grid: {display: false}}}}});
+  // gráfico de linhas: os 8 maiores no período
+  const faixa = meses.map((m, i) => i).filter(i => meses[i] >= de && i <= ri);
+  const top = [...grupos].sort((a, b) => faixa.reduce((s, i) => s + v(b[met], i), 0) - faixa.reduce((s, i) => s + v(a[met], i), 0)).slice(0, 8);
+  const tick = {color: getComputedStyle(document.documentElement).getPropertyValue('--mut').trim(), font: {size: 11}};
+  if (top.length && faixa.length) charts.cm = new Chart($('cMacro'), {type: 'line',
+    data: {labels: faixa.map(i => meses[i]), datasets: top.map((g, k) => ({label: g.nome, data: faixa.map(i => v(g[met], i)), borderColor: MCOR[k % 8], backgroundColor: MCOR[k % 8], tension: .25, pointRadius: 2, borderWidth: 2}))},
+    options: {maintainAspectRatio: false, animation: reduz ? false : undefined, interaction: {mode: 'index', intersect: false},
+      plugins: {legend: {position: 'bottom', labels: {boxWidth: 12, font: {size: 11}}}, tooltip: {callbacks: {label: c => c.dataset.label + ': ' + fm(met, c.parsed.y)}}},
+      scales: {x: {ticks: tick, grid: {display: false}}, y: {ticks: {...tick, callback: x => met === 'rec' ? 'R$ ' + nf.format(x) : nf.format(x)}, beginAtZero: true}}}});
+}
 // ---- Aba "Conferência": compara a planilha do SisATeG (um mês) com o painel, por propriedade
 // texto com vírgula = pt-BR (1.234,5); sem vírgula: pontos só são milhar se vierem em grupos de 3 dígitos (1.234 ou 1.234.567); senão o ponto é decimal (2.5)
 const numTxt = t => { t = t.trim(); if (t.includes(',')) return t.replace(/\./g, '').replace(',', '.'); return /^-?\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, '') : t; };
@@ -700,11 +877,11 @@ let confArquivo = null;
 $('confArq').onchange = ev => { confArquivo = ev.target.files[0]; if (confArquivo) conferePlanilha(confArquivo); };
 $('confSit').onchange = () => { if (confArquivo) conferePlanilha(confArquivo); };
 function mostraAba(nome){
-  const alvos = {graficos:'aba-graficos', destaques:'destaques', causas:'causas', tipos:'tipos', conf:'conf', tabela:'aba-tabela'};
+  const alvos = {macro:'macro', graficos:'aba-graficos', destaques:'destaques', causas:'causas', tipos:'tipos', conf:'conf', tabela:'aba-tabela'};
   Object.entries(alvos).forEach(([n, id]) => { $(id).hidden = (n !== nome); });
   abaAtual = nome; carregaPendentes(nome);
   document.querySelectorAll('.aba').forEach(b => { const on = b.dataset.aba === nome; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
-  if (nome === 'graficos' || nome === 'causas') Object.values(charts).forEach(c => c.resize());
+  if (nome === 'graficos' || nome === 'causas' || nome === 'macro') Object.values(charts).forEach(c => c.resize());
 }
 document.querySelectorAll('.aba').forEach(b => b.onclick = () => mostraAba(b.dataset.aba));
 // Números negativos em vermelho em qualquer texto/tabela das abas (R$ -83,16, −R$ 1.200, -12,5%, ...)

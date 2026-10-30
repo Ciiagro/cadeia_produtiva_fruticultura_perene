@@ -493,6 +493,97 @@ def tipos(supervisor: str | None = None, tecnico: str | None = None, propriedade
             "despesa_total": desp_total, "receita_total": rec_total, "margem_bruta": rb["total"] - dd["total"]}
 
 
+# ----------------------------------------------------------------------------------------------------------------
+# VISÃO MACRO: todas as propriedades, visitas, receita e produção (kg vendidos), comparando regiões (ou municípios de uma região) no tempo.
+# Lê só views do servidor público. O que não existir vira aviso, não erro.
+# ----------------------------------------------------------------------------------------------------------------
+def _norm(t):
+    import unicodedata
+    t = unicodedata.normalize("NFD", t or "")
+    return " ".join("".join(c for c in t if unicodedata.category(c) != "Mn").upper().split())
+
+
+@app.get("/api/macro")
+def macro(cadeia: str = "fruta", regiao: str | None = None, situacao: str | None = None, nivel: str | None = None,
+          ate: str | None = Query(None, description="YYYY-MM")):
+    """Séries mensais por região (ou por município, se uma região foi escolhida): propriedades, visitas, receita e kg vendidos."""
+    por_mun = bool(regiao) or nivel == "municipio"
+    gcol = "municipio" if por_mun else "regiao"
+    avisos, grupos, nomes = [], {}, {}
+    meses_set = set()
+
+    def g(nome):
+        k = _norm(nome) if nome else "SEM REGIAO"
+        nomes.setdefault(k, nome or "Sem região")
+        return grupos.setdefault(k, {"cad": 0, "rec": {}, "prod": {}, "props": {}, "vis": {}, "assist": {}, "pp": {}})
+
+    where, p = _where(None, None, None, None, situacao, None, regiao=regiao)
+    wsql = " AND ".join(where)
+    pp = {**p, "mi": MES_INICIO}
+    cate = ""
+    if ate:
+        cate = " AND mes <= :ate"; pp["ate"] = ate
+    with engine.connect() as con:
+        try:
+            for r in con.execute(text(f"""SELECT mes, {gcol} AS grupo, id_propriedade, SUM(receita_bruta) AS rec, SUM(kg_vendidos) AS prod
+                     FROM {TABLE} WHERE {wsql} AND mes >= :mi{cate} GROUP BY 1, 2, 3"""), pp).mappings():
+                x = g(r["grupo"]); m = r["mes"]; meses_set.add(m)
+                rec, prod = float(r["rec"] or 0), float(r["prod"] or 0)
+                x["rec"][m] = x["rec"].get(m, 0) + rec
+                x["prod"][m] = x["prod"].get(m, 0) + prod
+                x["props"][m] = x["props"].get(m, 0) + 1
+                x["pp"].setdefault(("fruta", r["id_propriedade"]), {})[m] = (rec, prod)
+            for r in con.execute(text(f"""SELECT {gcol} AS grupo, COUNT(DISTINCT id_propriedade) AS n
+                     FROM {PROPS} WHERE {wsql} GROUP BY 1"""), pp).mappings():
+                g(r["grupo"])["cad"] += int(r["n"] or 0)
+        except Exception as e:
+            con.rollback()
+            avisos.append(f"fruticultura: não consegui ler ({str(e).splitlines()[0][:120]}). Rode a atualização desse painel.")
+        # Visitas e propriedades assistidas: visitas (de qualquer atividade) às propriedades com lançamento de fruticultura
+        try:
+            vt = "public.mv_visitas" if con.execute(text("SELECT to_regclass('public.mv_visitas') IS NOT NULL")).scalar() else "public.vw_visitas"
+            vw = ["COALESCE(projeto, '') NOT ILIKE 'TREINAMENTO%'", "mes >= :mi",
+                  f"id_propriedade::text IN (SELECT id_propriedade::text FROM {TABLE} WHERE COALESCE(receita_bruta,0) > 0 OR COALESCE(kg_vendidos,0) > 0)"]
+            vp = {"mi": MES_INICIO}
+            if ate:
+                vw.append("mes <= :ate"); vp["ate"] = ate
+            if regiao:
+                vw.append("regiao_faec = :rg"); vp["rg"] = regiao
+            vg = "municipio" if por_mun else "regiao_faec"
+            for r in con.execute(text(f"""SELECT mes, {vg} AS grupo, COUNT(DISTINCT id_visita) AS vis, COUNT(DISTINCT id_propriedade) AS assist
+                     FROM {vt} WHERE {' AND '.join(vw)} GROUP BY 1, 2"""), vp).mappings():
+                x = g(r["grupo"]); m = r["mes"]; meses_set.add(m)
+                x["vis"][m] = int(r["vis"] or 0); x["assist"][m] = int(r["assist"] or 0)
+        except Exception as e:
+            con.rollback()
+            avisos.append(f"visitas: não consegui ler ({str(e).splitlines()[0][:120]})")
+    meses = sorted(meses_set)
+    out = []
+    for k, x in grupos.items():
+        if not x["cad"] and not any(x["rec"].values()) and not any(x["prod"].values()):
+            continue   # só visitas de outra atividade: fora do painel desta cadeia
+        # "Mesmas propriedades": o mês só é comparado com as propriedades que tiveram valor (>0) nos DOIS meses comparados
+        lfl = {}
+        for fi, f in ((0, "rec"), (1, "prod")):
+            lfl[f] = {}
+            for off in (1, 12):
+                cur, base = [], []
+                for i in range(len(meses)):
+                    c = b = 0.0
+                    if i >= off:
+                        for vals in x["pp"].values():
+                            a_, b_ = vals.get(meses[i]), vals.get(meses[i - off])
+                            if a_ and b_ and a_[fi] > 0 and b_[fi] > 0:
+                                c += a_[fi]; b += b_[fi]
+                    cur.append(round(c, 2)); base.append(round(b, 2))
+                lfl[f][str(off)] = {"cur": cur, "base": base}
+        out.append({"nome": nomes[k], "cadastro": x["cad"], "lfl": lfl,
+                    **{f: [x[f].get(m) for m in meses] for f in ("rec", "prod", "props", "vis", "assist")}})
+    out.sort(key=lambda z: -sum(v or 0 for v in z["rec"]))
+    return {"nivel": "município" if por_mun else "região", "cadeia": "fruta", "unidade": "kg",
+            "meses": meses, "grupos": out, "avisos": avisos}
+
+
 @app.get("/api/conferencia")
 def conferencia(mes: str = Query(..., description="YYYY-MM")):
     """Aba 'Conferência': receita bruta, despesa direta e kg vendidos do painel, por propriedade e visita, em um mês (para comparar com a planilha do SisATeG)."""
