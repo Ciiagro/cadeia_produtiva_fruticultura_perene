@@ -22,7 +22,7 @@ SELECT v.id_propriedade, v.propriedade, v.produtor,
        COALESCE(k2.ultimo_supervisor, v.supervisor) AS supervisor,
        v.supervisor_sisateg, v.municipio, v.uf, v.area_total, v.area_produtiva,
        v.projeto, v.qtd_projetos, v.inicio_projeto, v.fim_projeto, v.status_vinculo, v.motivo_desativacao, v.ativa,
-       m.mes, m.id_visita, m.kg_vendidos, m.unidades_vendidas, m.venda_fruta_rs, m.venda_kg_rs, m.receita_bruta, m.despesa_direta,
+       m.mes, m.kg_vendidos, m.unidades_vendidas, m.venda_fruta_rs, m.venda_kg_rs, m.receita_bruta, m.despesa_direta,
        (m.receita_bruta - m.despesa_direta) AS margem_bruta
 FROM public.vw_fruta_propriedades v
 JOIN public.resumo_fruta_mensal m ON m.id_propriedade = v.id_propriedade
