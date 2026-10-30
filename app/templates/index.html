@@ -571,7 +571,9 @@ async function carregaTipos(q){
 }
 // ---- Aba "Conferência" (igual à da Bovinocultura; compara receita, despesa e kg vendidos)
 // ---- Aba "Conferência": compara a planilha do SisATeG (um mês) com o painel, por propriedade
-const numC = x => { if (x == null || x === '') return 0; const n = typeof x === 'number' ? x : parseFloat(String(x).replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
+// texto com vírgula = pt-BR (1.234,5); sem vírgula: pontos só são milhar se vierem em grupos de 3 dígitos (1.234 ou 1.234.567); senão o ponto é decimal (2.5)
+const numTxt = t => { t = t.trim(); if (t.includes(',')) return t.replace(/\./g, '').replace(',', '.'); return /^-?\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, '') : t; };
+const numC = x => { if (x == null || x === '') return 0; const n = typeof x === 'number' ? x : parseFloat(numTxt(String(x))); return isFinite(n) ? n : 0; };
 const normC = t => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
 async function conferePlanilha(file){
   const box = $('confCorpo'); box.innerHTML = '<p class="d-vazio">Lendo a planilha e comparando…</p>';
