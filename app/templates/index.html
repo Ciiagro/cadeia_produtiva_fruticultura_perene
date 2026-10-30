@@ -192,6 +192,7 @@
     <label><span class="lb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Projeto</span><select id="proj"><option value="">Todos</option></select></label>
     <label><span class="lb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20v-1a6.5 6.5 0 0113 0v1"/><path d="M16 4.6a3.5 3.5 0 010 6.8M21.5 20v-1a6.5 6.5 0 00-4-6"/></svg>Supervisor</span><select id="sup"><option value="">Todos</option></select></label>
     <label><span class="lb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0116 0v1"/></svg>Técnico</span><select id="tec"><option value="">Todos</option></select></label>
+    <label><span class="lb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>Região</span><select id="reg"><option value="">Todas</option></select></label>
     <label><span class="lb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11.5a7 7 0 10-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Município</span><select id="mun"><option value="">Todos</option></select></label>
     <label><span class="lb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8c-3-2-8-1-8 5 0 4 3 8 6 8 1 0 1.500-.5 2-.5s1 .5 2 .5c3 0 6-4 6-8 0-6-5-7-8-5z"/><path d="M12 8c0-2 1-3.500 3-4"/></svg>Fruta</span><select id="fru"><option value="">Todas</option></select></label>
     <label><span class="lb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="M12 13c-4 0-6-3-6-7 4 0 6 3 6 7z"/><path d="M12 16c3.500 0 6-2.500 6-6-3.500 0-6 2.500-6 6z"/></svg>Safra</span><select id="saf"><option value="">Todas</option></select></label>
@@ -327,13 +328,13 @@ function preenche(sel, itens){
   sel.value = itens.includes(atual) ? atual : '';
 }
 async function carregaFiltros(){
-  const f = await (await fetch('/api/filtros?'+new URLSearchParams({projeto:$('proj').value, supervisor:$('sup').value, tecnico:$('tec').value, municipio:$('mun').value, fruta:$('fru').value, safra:$('saf').value, situacao:$('sit').value, de:$('de').dataset.ok?$('de').value:'', ate:$('de').dataset.ok?$('ate').value:''}))).json();
+  const f = await (await fetch('/api/filtros?'+new URLSearchParams({projeto:$('proj').value, supervisor:$('sup').value, tecnico:$('tec').value, municipio:$('mun').value, regiao:$('reg').value, fruta:$('fru').value, safra:$('saf').value, situacao:$('sit').value, de:$('de').dataset.ok?$('de').value:'', ate:$('de').dataset.ok?$('ate').value:''}))).json();
   if(!$('de').dataset.ok){ f.meses.forEach(m=>{$('de').add(new Option(m,m)); $('ate').add(new Option(m,m));}); $('de').value=f.meses[0];
     // abre sempre no último mês FECHADO: se o mais recente é o mês atual (ainda em lançamento), usa o anterior
     const hoje = new Date(), atual = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
     let fim = f.meses[f.meses.length-1]; if (fim === atual && f.meses.length > 1) fim = f.meses[f.meses.length-2];
     $('ate').value = fim; $('de').dataset.ok=1; }
-  preenche($('proj'), f.projetos); preenche($('sup'), f.supervisores); preenche($('tec'), f.tecnicos); preenche($('mun'), f.municipios); preenche($('fru'), f.frutas); preenche($('saf'), f.safras);
+  preenche($('proj'), f.projetos); preenche($('sup'), f.supervisores); preenche($('tec'), f.tecnicos); preenche($('mun'), f.municipios); preenche($('reg'), f.regioes||[]); preenche($('fru'), f.frutas); preenche($('saf'), f.safras);
   const pa = $('prop').value; $('prop').length = 1; f.propriedades.forEach(p=>$('prop').add(new Option(p.nome+' ('+p.id+')', p.id)));
   $('prop').value = f.propriedades.some(p=>String(p.id)===pa)?pa:'';
 }
@@ -393,7 +394,7 @@ function carregaPendentes(nome){
   else if (nome === 'tipos') carregaTipos(q);
 }
 async function atualiza(){
-  const q = new URLSearchParams({projeto:$('proj').value, supervisor:$('sup').value, tecnico:$('tec').value, propriedade:$('prop').value, municipio:$('mun').value, fruta:$('fru').value, safra:$('saf').value, situacao:$('sit').value, de:$('de').value, ate:$('ate').value});
+  const q = new URLSearchParams({projeto:$('proj').value, supervisor:$('sup').value, tecnico:$('tec').value, propriedade:$('prop').value, municipio:$('mun').value, regiao:$('reg').value, fruta:$('fru').value, safra:$('saf').value, situacao:$('sit').value, de:$('de').value, ate:$('ate').value});
   // título da tela: o recorte escolhido nos filtros
   const escopo = $('prop').value ? $('prop').selectedOptions[0].text : ($('tec').value || $('mun').value || $('sup').value || $('proj').value || 'Todas as propriedades');
   $('titulo').textContent = escopo;
@@ -468,7 +469,7 @@ async function atualiza(){
       `<td class="sep">${brlc(x.margem_leite)}</td><td>${pct(x.var_margem_leite_pct)}</td>`+
       `<td class="sep">${nf.format(x.producao_media_produtor)}</td><td>${pct(x.var_prod_media_pct)}</td></tr>`).join('') + '</tbody>';
 }
-['proj','sup','tec','mun','fru','saf','sit','de','ate'].forEach(id => $(id).onchange = async () => { await carregaFiltros(); atualiza(); });
+['proj','sup','tec','reg','mun','fru','saf','sit','de','ate'].forEach(id => $(id).onchange = async () => { await carregaFiltros(); atualiza(); });
 $('prop').onchange=atualiza;
 $('btnAtualiza').onclick = async()=>{ await carregaFiltros(); atualiza(); };
 // Excel da tabela mensal: usa exatamente os dados na tela, ou seja, já respeitando todos os filtros
@@ -487,7 +488,7 @@ function baixaExcel(){
   ws['!cols'] = cab.map((t, i) => ({wch: i === 0 ? 10 : Math.max(14, t.length + 2)}));
   ws['!freeze'] = {xSplit: 1, ySplit: 1};
   const txt = id => { const s = $(id); return s.value ? s.selectedOptions[0].text : (id === 'prop' ? 'Todas' : 'Todos'); };
-  const filtros = [['Filtro','Valor'], ['Projeto', txt('proj')], ['Supervisor', txt('sup')], ['Técnico', txt('tec')], ['Município', txt('mun')], ['Fruta', txt('fru')], ['Safra', txt('saf')],
+  const filtros = [['Filtro','Valor'], ['Projeto', txt('proj')], ['Supervisor', txt('sup')], ['Técnico', txt('tec')], ['Região', txt('reg')], ['Município', txt('mun')], ['Fruta', txt('fru')], ['Safra', txt('saf')],
     ['Propriedade', txt('prop')], ['Situação', txt('sit')], ['Período', $('de').value + ' a ' + $('ate').value], ['Gerado em', new Date().toLocaleString('pt-BR')]];
   const wf = XLSX.utils.aoa_to_sheet(filtros); wf['!cols'] = [{wch: 14}, {wch: 48}];
   const wb = XLSX.utils.book_new();
@@ -564,9 +565,10 @@ async function carregaTipos(q){
       ${kpi('Investimento e empréstimo', d.despesa_fora.total, '', 'Aquisição de bem e pagamento de empréstimo')}
       ${kpi('Total de despesas', d.despesa_total, 'neg', 'Direta + outras + investimento e empréstimo (como o Total Despesas do SisATeG)')}
     </div></div>
-    <div class="d-2col">${bloco('Receita bruta', 'Venda de fruta, mudas, subprodutos e outras, sem empréstimo nem investimento', tab(d.receita_bruta))}${bloco('Despesa direta', 'As despesas que entram no cálculo da margem bruta', tab(d.despesa_direta))}</div>
-    <div class="d-2col">${bloco('Outras despesas', 'Mão de obra familiar e formação e recuperação da lavoura. Não entram na despesa direta, mas somam no total de despesas', tab(d.despesa_outras))}${bloco('Investimento e empréstimo', 'Não entram na despesa direta, mas somam no total de despesas', tab(d.despesa_fora))}</div>
-    <div class="d-2col">${bloco('Receitas fora da receita bruta', 'Venda de bem e recebimento de empréstimo', tab(d.receita_fora))}<div></div></div>`;
+    <div class="d-2col" style="align-items:start">
+      <div style="display:grid;gap:14px;min-width:0"><h3 class="c-tit" style="margin:0;border-top:0;padding-top:0">Receitas</h3>${bloco('Receita bruta', 'Venda de fruta, mudas, subprodutos e outras, sem empréstimo nem investimento', tab(d.receita_bruta))}${bloco('Receitas fora da receita bruta', 'Venda de bem e recebimento de empréstimo', tab(d.receita_fora))}</div>
+      <div style="display:grid;gap:14px;min-width:0"><h3 class="c-tit" style="margin:0;border-top:0;padding-top:0">Despesas</h3>${bloco('Despesa direta', 'As despesas que entram no cálculo da margem bruta', tab(d.despesa_direta))}${bloco('Outras despesas', 'Mão de obra familiar e formação e recuperação da lavoura. Não entram na despesa direta, mas somam no total de despesas', tab(d.despesa_outras))}${bloco('Investimento e empréstimo', 'Não entram na despesa direta, mas somam no total de despesas', tab(d.despesa_fora))}</div>
+    </div>`;
 }
 // ---- Aba "Conferência" (igual à da Bovinocultura; compara receita, despesa e kg vendidos)
 // ---- Aba "Conferência": compara a planilha do SisATeG (um mês) com o painel, por propriedade

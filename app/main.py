@@ -74,7 +74,7 @@ def index(request: Request):
     return templates.TemplateResponse(request, "index.html")
 
 
-def _where(supervisor=None, tecnico=None, projeto=None, propriedade=None, situacao=None, municipio=None, fruta=None, safra=None):
+def _where(supervisor=None, tecnico=None, projeto=None, propriedade=None, situacao=None, municipio=None, fruta=None, safra=None, regiao=None):
     """Monta WHERE + parâmetros para os filtros (mesmas colunas nas duas views)."""
     w, p = ["1=1"], {}
     if supervisor:
@@ -87,6 +87,8 @@ def _where(supervisor=None, tecnico=None, projeto=None, propriedade=None, situac
         w.append("id_propriedade = :pr"); p["pr"] = propriedade
     if municipio:
         w.append("municipio = :mu"); p["mu"] = municipio
+    if regiao:
+        w.append("regiao = :rg"); p["rg"] = regiao
     if fruta:
         w.append("fruta = :fr"); p["fr"] = fruta
     if safra:
@@ -100,7 +102,7 @@ def _where(supervisor=None, tecnico=None, projeto=None, propriedade=None, situac
 
 @app.get("/api/filtros")
 def filtros(supervisor: str | None = None, tecnico: str | None = None, projeto: str | None = None,
-            municipio: str | None = None, fruta: str | None = None, safra: str | None = None, situacao: str | None = None,
+            municipio: str | None = None, fruta: str | None = None, safra: str | None = None, regiao: str | None = None, situacao: str | None = None,
             de: str | None = None, ate: str | None = None):
     """Listas dos filtros. Cada lista respeita TODOS os outros filtros já escolhidos (filtros em cascata)
     e o período De/Até: só aparece quem tem lançamento nesses meses."""
@@ -109,7 +111,7 @@ def filtros(supervisor: str | None = None, tecnico: str | None = None, projeto: 
             w.append("mes >= :pde"); p["pde"] = max(de, MES_INICIO)
         if ate:
             w.append("mes <= :pate"); p["pate"] = ate
-    escolhidos = {"supervisor": supervisor, "tecnico": tecnico, "projeto": projeto, "municipio": municipio, "fruta": fruta, "safra": safra}
+    escolhidos = {"supervisor": supervisor, "tecnico": tecnico, "projeto": projeto, "municipio": municipio, "regiao": regiao, "fruta": fruta, "safra": safra}
     with engine.connect() as con:
         def lista(coluna):
             outros = {k: v for k, v in escolhidos.items() if k != coluna}
@@ -119,16 +121,16 @@ def filtros(supervisor: str | None = None, tecnico: str | None = None, projeto: 
             tabela = TABLE_F if (coluna in ("fruta", "safra") or outros.get("fruta") or outros.get("safra")) else TABLE
             return [r[0] for r in con.execute(text(
                 f"SELECT DISTINCT {coluna} FROM {tabela} WHERE {' AND '.join(w)} ORDER BY 1"), p)]
-        projetos, sups, tecs, muns, frutas, safras = (lista("projeto"), lista("supervisor"), lista("tecnico"),
-                                                      lista("municipio"), lista("fruta"), lista("safra"))
-        w2, p2 = _where(supervisor, tecnico, projeto, None, situacao, municipio, fruta=fruta, safra=safra)
+        projetos, sups, tecs, muns, frutas, safras, regs = (lista("projeto"), lista("supervisor"), lista("tecnico"),
+                                                      lista("municipio"), lista("fruta"), lista("safra"), lista("regiao"))
+        w2, p2 = _where(supervisor, tecnico, projeto, None, situacao, municipio, fruta=fruta, safra=safra, regiao=regiao)
         _periodo(w2, p2)
         tab2 = TABLE_F if (fruta or safra) else TABLE
         props = [{"id": r[0], "nome": r[1]} for r in con.execute(text(
             f"SELECT DISTINCT id_propriedade, COALESCE(propriedade, 'Propriedade ' || id_propriedade) "
             f"FROM {tab2} WHERE {' AND '.join(w2)} ORDER BY 2"), p2)]
         meses = [r[0] for r in con.execute(text(f"SELECT DISTINCT mes FROM {TABLE} WHERE mes >= :mi ORDER BY 1"), {"mi": MES_INICIO})]
-    return {"projetos": projetos, "supervisores": sups, "tecnicos": tecs, "municipios": muns, "frutas": frutas, "safras": safras,
+    return {"projetos": projetos, "supervisores": sups, "tecnicos": tecs, "municipios": muns, "regioes": regs, "frutas": frutas, "safras": safras,
             "propriedades": props, "meses": meses}
 
 
@@ -155,9 +157,9 @@ def propriedade(id_propriedade: int):
 
 @app.get("/api/serie")
 def serie(supervisor: str | None = None, tecnico: str | None = None, propriedade: int | None = None,
-          projeto: str | None = None, situacao: str | None = None, municipio: str | None = None, fruta: str | None = None, safra: str | None = None,
+          projeto: str | None = None, situacao: str | None = None, municipio: str | None = None, fruta: str | None = None, safra: str | None = None, regiao: str | None = None,
           de: str | None = Query(None, description="YYYY-MM"), ate: str | None = Query(None, description="YYYY-MM")):
-    where, p = _where(supervisor, tecnico, projeto, propriedade, situacao, municipio, fruta=fruta, safra=safra)
+    where, p = _where(supervisor, tecnico, projeto, propriedade, situacao, municipio, fruta=fruta, safra=safra, regiao=regiao)
     tab = TABLE_F if (fruta or safra) else TABLE
     p["de"] = max(de or MES_INICIO, MES_INICIO)
     where.append("mes >= :de")
@@ -176,7 +178,7 @@ def serie(supervisor: str | None = None, tecnico: str | None = None, propriedade
                COUNT(DISTINCT produtor)                 AS produtores
         FROM {tab} WHERE {' AND '.join(where)}
         GROUP BY mes ORDER BY mes"""
-    wp, pp = _where(supervisor, tecnico, projeto, propriedade, None, municipio)
+    wp, pp = _where(supervisor, tecnico, projeto, propriedade, None, municipio, regiao=regiao)
     # o card conta as propriedades ativas hoje; no filtro 'Inativas' conta as inativas
     wp.append("NOT ativa" if situacao == "inativa" else "ativa")
     with engine.connect() as con:
@@ -222,13 +224,13 @@ def serie(supervisor: str | None = None, tecnico: str | None = None, propriedade
 
 @app.get("/api/destaques")
 def destaques(supervisor: str | None = None, tecnico: str | None = None, propriedade: int | None = None,
-              projeto: str | None = None, situacao: str | None = None, municipio: str | None = None, fruta: str | None = None, safra: str | None = None,
+              projeto: str | None = None, situacao: str | None = None, municipio: str | None = None, fruta: str | None = None, safra: str | None = None, regiao: str | None = None,
               ate: str | None = Query(None, description="YYYY-MM"),
               de: str | None = Query(None, description="YYYY-MM")):
     """Destaques automáticos do mês de referência (por regras, sem IA): comparam o mês com o anterior,
     dentro dos filtros escolhidos. Se o último mês ainda está em andamento, usa o mês anterior (fechado)."""
     from datetime import date
-    where, p = _where(supervisor, tecnico, projeto, propriedade, situacao, municipio, fruta=fruta, safra=safra)
+    where, p = _where(supervisor, tecnico, projeto, propriedade, situacao, municipio, fruta=fruta, safra=safra, regiao=regiao)
     tab = TABLE_F if (fruta or safra) else TABLE
     wsql = " AND ".join(where)
     sub = {"mi": MES_INICIO}
@@ -343,12 +345,12 @@ DESP = os.environ.get("DESP_NAME", "public.vw_fruta_despesa_subgrupo")
 
 @app.get("/api/causas")
 def causas(supervisor: str | None = None, tecnico: str | None = None, propriedade: int | None = None,
-           projeto: str | None = None, situacao: str | None = None, municipio: str | None = None, fruta: str | None = None, safra: str | None = None,
+           projeto: str | None = None, situacao: str | None = None, municipio: str | None = None, fruta: str | None = None, safra: str | None = None, regiao: str | None = None,
            de: str | None = Query(None, description="YYYY-MM"), ate: str | None = Query(None, description="YYYY-MM")):
     """Aba 'Causas' (por regras, sem IA): quando as propriedades entraram/saíram, preço por kg fora do normal
     e despesa direta por subgrupo. Tudo dentro dos filtros escolhidos."""
     from datetime import date
-    where, p = _where(supervisor, tecnico, projeto, propriedade, situacao, municipio, fruta=fruta, safra=safra)
+    where, p = _where(supervisor, tecnico, projeto, propriedade, situacao, municipio, fruta=fruta, safra=safra, regiao=regiao)
     tab = TABLE_F if (fruta or safra) else TABLE
     wsql = " AND ".join(where)
     pp = {**p, "mi": MES_INICIO}
@@ -461,10 +463,10 @@ TIPO = os.environ.get("TIPO_NAME", "public.vw_fruta_tipo")
 
 @app.get("/api/tipos")
 def tipos(supervisor: str | None = None, tecnico: str | None = None, propriedade: int | None = None,
-          projeto: str | None = None, situacao: str | None = None, municipio: str | None = None, fruta: str | None = None, safra: str | None = None,
+          projeto: str | None = None, situacao: str | None = None, municipio: str | None = None, fruta: str | None = None, safra: str | None = None, regiao: str | None = None,
           de: str | None = Query(None, description="YYYY-MM"), ate: str | None = Query(None, description="YYYY-MM")):
     """Aba 'Receitas e despesas': receita bruta, despesa direta e despesa total, abertas por tipo (subgrupo), no período e filtros."""
-    where, p = _where(supervisor, tecnico, projeto, propriedade, situacao, municipio, fruta=fruta, safra=safra)
+    where, p = _where(supervisor, tecnico, projeto, propriedade, situacao, municipio, fruta=fruta, safra=safra, regiao=regiao)
     tab = TABLE_F if (fruta or safra) else TABLE
     wsql = " AND ".join(where)
     pp = {**p, "de": max(de or MES_INICIO, MES_INICIO)}
