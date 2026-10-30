@@ -500,17 +500,19 @@ def conferencia(mes: str = Query(..., description="YYYY-MM")):
             treino = [r[0] for r in con.execute(text(f"SELECT DISTINCT id_propriedade::text FROM {PROPS} WHERE COALESCE(projeto, '') ILIKE 'TREINAMENTO%'"))]
     except Exception:
         treino = []
-    fora, tipos = {}, {}
+    fora, tipos, desp_tot = {}, {}, {}
     try:   # receita que o SisATeG soma em "Receitas" mas fica fora da receita bruta (venda de bem e empréstimo) + tipo de cada receita/despesa (de onde vem a diferença)
         with engine.connect() as con:
             for r in con.execute(text(f"""SELECT id_propriedade::text AS id, grupo, classe, subgrupo, SUM(valor) AS v FROM {TIPO}
                       WHERE mes = :m AND COALESCE(projeto, '') NOT ILIKE 'TREINAMENTO%' GROUP BY 1, 2, 3, 4
                       HAVING ABS(COALESCE(SUM(valor), 0)) > 0"""), {"m": mes}).mappings():
                 tipos.setdefault(r["id"], []).append([r["grupo"], r["classe"], r["subgrupo"], float(r["v"] or 0)])
+                if r["grupo"] == "Despesa":   # a planilha de fruta traz o TOTAL de despesas (com empréstimo, investimento, mão de obra familiar e formação)
+                    desp_tot[r["id"]] = desp_tot.get(r["id"], 0.0) + float(r["v"] or 0)
                 if r["classe"] == "Fora da receita bruta":
                     fora[r["id"]] = fora.get(r["id"], 0.0) + float(r["v"] or 0)
     except Exception:
-        fora, tipos = {}, {}
+        fora, tipos, desp_tot = {}, {}, {}
     try:
         with engine.connect() as con:
             rows = con.execute(text(f"""SELECT id_propriedade::text AS id, NULL AS id_visita, MAX(propriedade) AS propriedade, MAX(municipio) AS municipio, MAX(projeto) AS projeto,
@@ -521,7 +523,7 @@ def conferencia(mes: str = Query(..., description="YYYY-MM")):
         return {"erro": str(e).splitlines()[0][:300]}
     return {"mes": mes, "com_visita": True, "treino": treino, "tipos": tipos,
             "itens": [{"id": r["id"], "id_visita": r["id_visita"], "propriedade": r["propriedade"], "municipio": r["municipio"], "projeto": r["projeto"], "ativa": bool(r["ativa"]), "rec_fora": fora.get(r["id"], 0.0),
-                       "rec": float(r["rec"] or 0), "desp": float(r["desp"] or 0), "prod": float(r["prod"] or 0)} for r in rows]}
+                       "rec": float(r["rec"] or 0), "desp": desp_tot.get(r["id"], float(r["desp"] or 0)), "prod": float(r["prod"] or 0)} for r in rows]}
 
 
 @app.get("/api/visitas_painel")

@@ -12,7 +12,8 @@ SELECT p.id_propriedade, p.propriedade, p.produtor, p.tecnico,
        p.municipio, p.uf, p.area_total, p.area_produtiva,
        p.projeto, p.qtd_projetos, p.inicio_projeto, p.fim_projeto, p.status_vinculo, p.motivo_desativacao, p.ativa
 FROM public.resumo_fruta_propriedades p
-LEFT JOIN public.ranking_tecnicos k ON btrim(k.tecnico_responsavel, E' \t\r\n') = p.tecnico;
+-- um registro por técnico (o ranking pode ter várias linhas por técnico e multiplicava receita, despesa e kg)
+LEFT JOIN (SELECT DISTINCT ON (btrim(tecnico_responsavel, E' \t\r\n')) btrim(tecnico_responsavel, E' \t\r\n') AS tec, ultimo_supervisor FROM public.ranking_tecnicos ORDER BY btrim(tecnico_responsavel, E' \t\r\n'), total_de_visitas DESC NULLS LAST) k ON k.tec = p.tecnico;
 
 -- Mensal: o técnico e o supervisor são os da ÉPOCA (da visita do mês); se faltar, usa o da propriedade.
 CREATE VIEW public.vw_fruta_mensal AS
@@ -25,7 +26,7 @@ SELECT v.id_propriedade, v.propriedade, v.produtor,
        (m.receita_bruta - m.despesa_direta) AS margem_bruta
 FROM public.vw_fruta_propriedades v
 JOIN public.resumo_fruta_mensal m ON m.id_propriedade = v.id_propriedade
-LEFT JOIN public.ranking_tecnicos k2 ON btrim(k2.tecnico_responsavel, E' \t\r\n') = COALESCE(m.tecnico, v.tecnico);
+LEFT JOIN (SELECT DISTINCT ON (btrim(tecnico_responsavel, E' \t\r\n')) btrim(tecnico_responsavel, E' \t\r\n') AS tec, ultimo_supervisor FROM public.ranking_tecnicos ORDER BY btrim(tecnico_responsavel, E' \t\r\n'), total_de_visitas DESC NULLS LAST) k2 ON k2.tec = COALESCE(m.tecnico, v.tecnico);
 
 -- Mensal POR FRUTA: igual à vw_fruta_mensal, com a coluna fruta (1 linha por propriedade, mês e fruta).
 -- Usada quando o filtro "Fruta" do painel está escolhido.
@@ -42,7 +43,7 @@ SELECT v.id_propriedade, v.propriedade, v.produtor,
        ROUND((m.receita_bruta - m.despesa_direta)::numeric, 2) AS margem_bruta
 FROM public.vw_fruta_propriedades v
 JOIN public.resumo_fruta_mensal_fruta m ON m.id_propriedade = v.id_propriedade
-LEFT JOIN public.ranking_tecnicos k2 ON btrim(k2.tecnico_responsavel, E' \t\r\n') = COALESCE(m.tecnico, v.tecnico);
+LEFT JOIN (SELECT DISTINCT ON (btrim(tecnico_responsavel, E' \t\r\n')) btrim(tecnico_responsavel, E' \t\r\n') AS tec, ultimo_supervisor FROM public.ranking_tecnicos ORDER BY btrim(tecnico_responsavel, E' \t\r\n'), total_de_visitas DESC NULLS LAST) k2 ON k2.tec = COALESCE(m.tecnico, v.tecnico);
 
 -- Despesa direta por subgrupo: mesmas colunas de filtro da vw_fruta_mensal + subgrupo e valor.
 CREATE VIEW public.vw_fruta_despesa_subgrupo AS

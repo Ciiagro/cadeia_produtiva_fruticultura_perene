@@ -215,7 +215,7 @@
   <section class="destaques" id="tipos" hidden></section>
   <section class="destaques" id="conf" hidden>
     <h2>Conferência com a planilha do SisATeG</h2>
-    <p class="d-resumo">Envie a planilha (.xlsx) do SisATeG de <b>um mês</b>. O painel casa cada linha pelo <b>ID da Propriedade</b> e compara <b>Total Receitas</b> com a receita bruta (mais venda de bem e recebimento de empréstimo), <b>Total Despesas</b> (menos empréstimo, investimento, mão de obra familiar e formação) com a despesa direta e os <b>kg vendidos</b> (soma das vendas em kg). Diferenças de até R$ 1,00 (ou 1 kg) são ignoradas.</p>
+    <p class="d-resumo">Envie a planilha (.xlsx) do SisATeG de <b>um mês</b>. O painel casa cada linha pelo <b>ID da Propriedade</b> e compara <b>Total Receitas</b> com a receita bruta (mais venda de bem e recebimento de empréstimo), <b>Total Despesas</b> com o total de despesas do painel e os <b>kg vendidos</b> (soma das vendas em kg). Diferenças de até R$ 1,00 (ou 1 kg) são ignoradas.</p>
     <div class="macro-ctl"><label>Planilha do SisATeG<input type="file" id="confArq" accept=".xlsx,.xls" autocomplete="off"></label>
       <label>Propriedades do painel<select id="confSit" autocomplete="off"><option value="ativas">Só ativas (como a planilha)</option><option value="todas">Ativas e inativas</option></select></label></div>
     <div id="confCorpo"><p class="d-vazio">Escolha a planilha para conferir.</p></div>
@@ -603,7 +603,7 @@ async function conferePlanilha(file){
     dados.forEach(l => { const idv = g(l, 'ID Propriedade') != null ? String(g(l, 'ID Propriedade')).trim() : ''; if (!/^\d+$/.test(idv)) return;   // ignora a linha "Total"
       const mes = String(Math.round(numC(g(l, 'Ano')))) + '-' + String(Math.round(numC(g(l, 'Mês')))).padStart(2, '0'); meses.add(mes);
       linhasTodas.push({visita: idv, id: String(g(l, 'ID Propriedade') ?? '').trim(), propriedade: g(l, 'Propriedade'), municipio: g(l, 'Município'),
-        rec: numC(g(l, 'Total Receitas')), desp: numC(g(l, 'Total Despesas')) - colsFora.reduce((t, k) => t + numC(l[k]), 0), prod: colsKg.reduce((t, k) => t + numC(l[k]), 0)}); });
+        rec: numC(g(l, 'Total Receitas')), desp: numC(g(l, 'Total Despesas')), prod: colsKg.reduce((t, k) => t + numC(l[k]), 0)}); });
     let linhas = linhasTodas, nTreino = 0;
     if (!linhas.length) { box.innerHTML = '<p class="d-vazio">Não encontrei linhas de dados abaixo do cabeçalho.</p>'; return; }
     if (meses.size !== 1) { box.innerHTML = '<p class="d-vazio">A planilha tem mais de um mês (' + [...meses].join(', ') + '). Envie a de um mês só.</p>'; return; }
@@ -653,7 +653,7 @@ async function conferePlanilha(file){
     const lst = (l, f) => l.slice(0, 40).map(f).join('; ') + (l.length > 40 ? '; …' : '');
     box.innerHTML = `${aviso}<p class="d-resumo"><b>Mês conferido: ${mes}</b> — ${ok ? '<span class="pos"><b>tudo bate com o painel</b></span>' : '<span class="neg"><b>há diferenças</b></span>'}</p>
       <div class="d-bloco" style="max-width:760px;margin-bottom:14px"><h3>Totais</h3><table class="t-simples"><thead><tr><th></th><th class="n">Planilha</th><th class="n">Painel</th><th class="n">Diferença</th></tr></thead><tbody>
-        ${lin('Receitas (receita bruta + venda de bem e empréstimo)', 'rec', R, 'recC')}${lin('Despesas diretas', 'desp', R)}${(colProd >= 0 ? lin('Kg vendidos', 'prod', L) : '')}</tbody></table></div>
+        ${lin('Receitas (receita bruta + venda de bem e empréstimo)', 'rec', R, 'recC')}${lin('Despesas (total, com empréstimo e investimento)', 'desp', R)}${(colProd >= 0 ? lin('Kg vendidos', 'prod', L) : '')}</tbody></table></div>
       <div class="d-bloco" style="max-width:760px;margin-bottom:14px"><h3>Propriedades (casadas pelo ID da Propriedade)</h3>
         ${cnt('Na planilha', A.length)}${cnt('No painel (propriedades neste mês)', P.length)}${cnt('Com valor diferente', dif.length, dif.length ? 'neg' : 'pos')}
         ${cnt('Só na planilha (faltam no painel)', soArq.length, soArq.length ? 'neg' : 'pos')}${soZero.length ? cnt('Visitas sem lançamento de fruta (esperado, não entram no painel)', soZero.length, '') : ''}${cnt('Só no painel (não estão na planilha)', soPan.length, soPan.length ? 'neg' : 'pos')}</div>
