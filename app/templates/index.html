@@ -744,13 +744,23 @@ function desenhaMacro(){
       if (!v(g[met], i)) return cel(null, true);
       return cel(usaLfl && l ? pct(l['12'].cur[i], l['12'].base[i]) : pct(v(g[met], i), v(g[met], i - 12))); }).join('')}</tr>`).join('') +
     `</tbody></table></div>` : '<p class="d-vazio">São necessários pelo menos 13 meses de histórico para comparar com o ano anterior.</p>';
+  const maxV = vals.length ? vals[0].cur : 1, totV = vals.reduce((s, z) => s + z.cur, 0) || 1;
+  const gm = Object.fromEntries(grupos.map(g => [g.nome, g.m[met]]));
+  const rankHtml = `<div class="rolagem" style="max-height:460px">` + vals.map((z, i) => { const m = gm[z.nome], x = m.dAno != null ? m.dAno : m.dMes;
+    return `<div style="display:grid;grid-template-columns:24px minmax(90px,1.2fr) 2fr auto 52px 64px;gap:8px;align-items:center;padding:6px 2px;border-bottom:1px solid var(--linha,#eadfce);font-size:13px">
+      <span style="color:var(--mut)">${i + 1}º</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${z.nome}">${z.nome}</b>
+      <span style="background:#e9efe9;border-radius:4px;height:8px;display:block"><span style="display:block;height:8px;border-radius:4px;background:#1d6b45;width:${Math.max(2, z.cur / maxV * 100)}%"></span></span>
+      <span style="text-align:right;font-variant-numeric:tabular-nums"><b>${fm(met, z.cur)}</b></span>
+      <span style="text-align:right;color:var(--mut)" title="Participação no total">${fmt(z.cur / totV * 100, 1)}%</span>
+      <span style="text-align:right" title="${m.dAno != null ? 'vs. mesmo mês do ano anterior' : 'vs. mês anterior'}">${x != null ? seta(x) : '<span style="color:var(--mut)">novo</span>'}</span></div>`; }).join('') + `</div>
+    <p class="d-resumo" style="margin-top:6px">Colunas: posição, ${nivel}, valor em ${ref}, participação no total e variação contra o mesmo mês do ano anterior.</p>`;
   box.innerHTML = `<p class="d-resumo">Mês de referência: <b>${ref}</b> (último mês fechado). Por <b>${nivel}</b>${nivel === 'município' ? '' : ' — clique numa região da tabela para ver os municípios'}.</p>${avisos}
     <div class="kpis kpis5" style="margin-bottom:14px">${cards}</div>
     <div class="par2"><div>
     ${modoVal ? `<h3 class="c-tit">${MM[met]} por ${nivel} em ${ref}</h3><p class="d-resumo">Valor de cada ${nivel} no mês de referência, do maior para o menor.</p>` : `<h3 class="c-tit">Crescimento de ${MM[met].toLowerCase()} por ${nivel}: ${PERN[$('mper').value]}</h3>
     <p class="d-resumo">Cada barra é um(a) ${nivel}: ${usaLfl && (met === 'rec' || met === 'prod') ? 'compara só as propriedades que lançaram nos dois meses, para não contar propriedade nova como crescimento.' : 'compara o total de cada mês.'}</p>`}
     ${semBase.length || semLancRef.length ? `<details class="mini"><summary>Quem não aparece nas barras (${semBase.length + semLancRef.length})</summary>${semBase.length ? `<p><b>Sem propriedade comparável (novas):</b> ${semBase.join(', ')}.</p>` : ''}${semLancRef.length ? `<p><b>Sem lançamento de fruticultura em ${ref} (fora do painel neste mês):</b> ${semLancRef.join(', ')}.</p>` : ''}</details>` : ''}
-    <div class="cv" style="height:${Math.max(300, 22 * ncres + 70)}px"><canvas id="cCres"></canvas></div>
+    ${modoVal ? rankHtml : `<div class="cv" style="height:${Math.max(300, 22 * ncres + 70)}px"><canvas id="cCres"></canvas></div>`}
     </div><div>
     <h3 class="c-tit">Evolução de ${MM[met].toLowerCase()} por ${nivel}</h3>
     <p class="d-resumo">Os 8 maiores no período De/Até.</p>
@@ -762,12 +772,7 @@ function desenhaMacro(){
     <p class="d-resumo">Verde = cresceu, vermelho = caiu em relação ao mesmo mês do ano anterior (intensidade até ±50%). Cinza com “–” = sem lançamento no mês (não é queda de 100%).${usaLfl && (met === 'rec' || met === 'prod') ? ' Comparação só com as propriedades que lançaram nos dois meses.' : ''}${grupos.length > 40 ? ' Mostra os 40 maiores em ' + ref + '.' : ''}</p>${hm}</details>`;
   box.querySelectorAll('td.lnk').forEach(td => td.onclick = () => { $('reg').value = td.dataset.reg; $('reg').onchange(); });
   box.querySelectorAll('th[data-mk]').forEach(th => th.onclick = () => { const k = th.dataset.mk; macroSort = {k, d: macroSort.k === k ? -macroSort.d : (k === 'nome' ? 1 : -1)}; desenhaMacro(); });
-  if (modoVal && ncres) charts.cc = new Chart($('cCres'), {type: 'bar', plugins: [rotulosPontos({tipo: 'barraH', fmt: x => fm(met, Math.round(x))})],
-    data: {labels: vals.map(z => z.nome), datasets: [{data: vals.map(z => z.cur), backgroundColor: '#1d6b45', borderRadius: 3}]},
-    options: {indexAxis: 'y', maintainAspectRatio: false, animation: reduz ? false : undefined, layout: {padding: {right: 70}},
-      plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => fm(met, vals[c.dataIndex].cur)}}},
-      scales: {x: {ticks: {color: '#5a6a61', font: {size: 11}}}, y: {ticks: {color: '#15251c', font: {size: 11}, autoSkip: false}, grid: {display: false}}}}});
-  else if (ncres) charts.cc = new Chart($('cCres'), {type: 'bar',
+  if (!modoVal && ncres) charts.cc = new Chart($('cCres'), {type: 'bar',
     data: {labels: cres.map(z => z.nome), datasets: [{data: cres.map(z => Math.max(-300, Math.min(300, z.x))), backgroundColor: cres.map(z => z.x >= 0 ? '#1d6b45' : '#b3261e'), borderRadius: 3}]},
     options: {indexAxis: 'y', maintainAspectRatio: false, animation: reduz ? false : undefined,
       plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => (cres[c.dataIndex].x > 0 ? '+' : '') + fmt(cres[c.dataIndex].x, 1) + '%  (atual: ' + fm(met, cres[c.dataIndex].cur) + ')'}}},
