@@ -77,10 +77,11 @@
   .pos{color:var(--pos);font-weight:600} .neg{color:var(--neg);font-weight:600}
 
   [hidden]{display:none !important}
-  .abas{display:flex;gap:4px;border-bottom:1px solid var(--linha);margin:0 0 16px;overflow-x:auto}
-  .aba{display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:10px 16px;font:inherit;font-weight:600;color:var(--mut);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap;border-radius:6px 6px 0 0}
-  .aba:hover{color:var(--ink);background:#f7ead7}
-  .aba.on{color:var(--verde-esc);border-bottom-color:var(--verde)}
+  .abas{display:flex;gap:8px;background:var(--surf);border:1px solid var(--linha);border-radius:14px;padding:8px;margin:0 0 18px;overflow-x:auto;box-shadow:0 2px 10px rgba(120,60,5,.12)}
+  .aba{display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:1 1 0;border:1.5px solid transparent;background:#fdf0dc;padding:13px 20px;font:inherit;font-size:16px;font-weight:700;color:var(--verde-esc);cursor:pointer;white-space:nowrap;border-radius:10px;transition:background .15s,color .15s,box-shadow .15s}
+  .aba svg{width:20px;height:20px}
+  .aba:hover{background:#f7ead7;border-color:var(--verde)}
+  .aba.on{background:linear-gradient(90deg,var(--verde-esc),var(--verde));color:#fff;border-color:var(--verde-esc);box-shadow:0 3px 8px rgba(120,60,5,.30)}
   .destaques{background:var(--surf);border:1px solid var(--linha);border-left:5px solid var(--verde);border-radius:12px;padding:16px 18px;margin-bottom:18px}
   .destaques h2{margin:0 0 6px;font-size:17px;font-weight:700}
   .d-resumo{margin:0 0 12px;font-size:14.5px;line-height:1.55}
@@ -163,8 +164,11 @@
   .pill{text-align:center;padding:7px 14px;border-radius:10px;min-width:118px;background:color-mix(in srgb,var(--cor) 11%,white);color:var(--cor)}
   .pill b{display:block;font-size:14px;white-space:nowrap} .pill small{font-size:10.5px;opacity:.85}
   .cv{margin-top:6px}
-  .abas{border-bottom:1px solid #f0dfc6}
-  .aba.on{color:var(--verde-esc);border-bottom-color:var(--verde-esc)}
+  .abas{background:linear-gradient(90deg,var(--verde-esc),var(--verde));border-color:var(--verde-esc);box-shadow:0 4px 14px rgba(120,60,5,.35)}
+  .aba{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.22)}
+  .aba:hover{background:rgba(255,255,255,.26);border-color:rgba(255,255,255,.55)}
+  .aba:focus{outline:none} .aba:focus-visible{outline:2px solid #f0b429;outline-offset:2px}
+  .aba.on{background:#fff;color:var(--verde-esc);border-color:#f0b429;box-shadow:0 5px 14px rgba(0,0,0,.30);transform:translateY(-1px)}
 </style>
 </head>
 <body>
@@ -364,6 +368,16 @@ async function carregaDestaques(q, parcial){
   }
   box.innerHTML = `<h2>Destaques: ${d.mes}${a ? ' comparado a ' + a : ''}</h2><p class="d-resumo">${frase}</p>` + porque + (blocos ? `<div class="d-grid">${blocos}</div>` : '');
 }
+// Abas pesadas carregam só no primeiro clique (com os filtros atuais): a tela abre mais rápido.
+let cargaAba = null, abaAtual = 'graficos';
+function carregaPendentes(nome){
+  if (!cargaAba || !cargaAba.pendentes.has(nome)) return;
+  cargaAba.pendentes.delete(nome);
+  const {q, parcial} = cargaAba;
+  if (nome === 'destaques') carregaDestaques(q, parcial);
+  else if (nome === 'causas') carregaCausas(q);
+  else if (nome === 'tipos') carregaTipos(q);
+}
 async function atualiza(){
   const q = new URLSearchParams({projeto:$('proj').value, supervisor:$('sup').value, tecnico:$('tec').value, propriedade:$('prop').value, municipio:$('mun').value, fruta:$('fru').value, safra:$('saf').value, situacao:$('sit').value, de:$('de').value, ate:$('ate').value});
   // título da tela: o recorte escolhido nos filtros
@@ -402,9 +416,8 @@ async function atualiza(){
     cartao('Unidades vendidas', nf.format(ult.unidades||0), ult.var_unidades_pct, d.map(x=>x.unidades), 'var(--c-un)', 'gota'),
     cartao('Unidades vendidas por produtor', nf.format(ult.unidades_media_produtor||0), ult.var_un_media_pct, d.map(x=>x.unidades_media_produtor), 'var(--c-un)', 'pessoas')
   ].join('') : '<p>Sem dados para o filtro.</p>';
-  carregaDestaques(q, parcial);
-  carregaCausas(q);
-  carregaTipos(q);
+  cargaAba = {q, parcial, pendentes: new Set(['destaques', 'causas', 'tipos'])};
+  carregaPendentes(abaAtual);
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   const soma = f => d.reduce((a,x)=>a+(+x[f]||0),0), media = f => { const v = d.map(x=>x[f]).filter(z=>z!=null); return v.length ? v.reduce((a,z)=>a+z,0)/v.length : null; };
   const setPill = (id, v, moeda, rot, casas) => { const el = $('pl-'+id); if (!el) return; el.innerHTML = `<b>${v==null?'–':(moeda?'R$ ':'')+fmt(v,casas)}</b><small>${rot}</small>`; };
@@ -548,6 +561,7 @@ async function carregaTipos(q){
 function mostraAba(nome){
   const alvos = {graficos:'aba-graficos', destaques:'destaques', causas:'causas', tipos:'tipos', tabela:'aba-tabela'};
   Object.entries(alvos).forEach(([n, id]) => { $(id).hidden = (n !== nome); });
+  abaAtual = nome; carregaPendentes(nome);
   document.querySelectorAll('.aba').forEach(b => { const on = b.dataset.aba === nome; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
   if (nome === 'graficos' || nome === 'causas') Object.values(charts).forEach(c => c.resize());
 }

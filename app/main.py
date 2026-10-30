@@ -2,11 +2,12 @@
 Lê SOMENTE a view do servidor público (nunca o banco local)."""
 import os
 import re
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, text
 
@@ -40,6 +41,31 @@ if not re.fullmatch(r"[A-Za-z0-9_]+\.[A-Za-z0-9_]+", TABLE):
 engine = create_engine(DB_URL, pool_pre_ping=True, pool_size=2, max_overflow=1, pool_recycle=300,
                        connect_args={"connect_timeout": 10})
 app = FastAPI(title="Acompanhamento mensal das cadeias")
+
+# Cache curto das respostas da API (TTL em segundos, CACHE_TTL=0 desliga): os dados só mudam quando o resumo é atualizado.
+# Reaproveita a resposta de filtros iguais e deixa também a borda (Vercel) guardá-la.
+_CACHE_TTL = int(os.environ.get("CACHE_TTL", "300"))
+_CACHE: dict = {}
+
+
+@app.middleware("http")
+async def cache_api(request: Request, call_next):
+    if request.method != "GET" or not request.url.path.startswith("/api/") or _CACHE_TTL <= 0:
+        return await call_next(request)
+    chave = request.url.path + "?" + request.url.query
+    agora = time.time()
+    cab = {"Cache-Control": f"public, max-age=60, s-maxage={_CACHE_TTL}, stale-while-revalidate={_CACHE_TTL * 2}"}
+    hit = _CACHE.get(chave)
+    if hit and agora - hit[0] < _CACHE_TTL:
+        return Response(hit[1], media_type="application/json", headers={**cab, "X-Cache": "HIT"})
+    resp = await call_next(request)
+    if resp.status_code != 200:
+        return resp
+    corpo = b"".join([c async for c in resp.body_iterator])
+    if len(_CACHE) >= 300:   # limite simples para não crescer sem fim
+        _CACHE.clear()
+    _CACHE[chave] = (agora, corpo)
+    return Response(corpo, status_code=200, media_type="application/json", headers={**cab, "X-Cache": "MISS"})
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 
@@ -163,9 +189,8 @@ def serie(supervisor: str | None = None, tecnico: str | None = None, propriedade
             total_props = con.execute(text(f"SELECT COUNT(DISTINCT id_propriedade) FROM {TABLE_F} WHERE {' AND '.join(wp)}"), pp).scalar()
         else:
             total_props = con.execute(text(f"SELECT COUNT(DISTINCT id_propriedade) FROM {PROPS} WHERE {' AND '.join(wp)}"), pp).scalar()
-    # Preço médio por kg = média dos preços de cada propriedade no mês (venda de fruta ÷ kg vendidos)
-    preco_mes = {}
-    with engine.connect() as con:
+        # Preço médio por kg = média dos preços de cada propriedade no mês (venda de fruta ÷ kg vendidos); mesma conexão
+        preco_mes = {}
         for r in con.execute(text(f"""SELECT mes, id_propriedade, SUM(venda_kg_rs) AS rs, SUM(kg_vendidos) AS l
                 FROM {tab} WHERE {' AND '.join(where)} AND kg_vendidos > 0 GROUP BY mes, id_propriedade"""), p).mappings():
             if r["l"] and float(r["l"]) > 0 and r["rs"] is not None:
