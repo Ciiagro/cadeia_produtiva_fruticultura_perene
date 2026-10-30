@@ -105,6 +105,10 @@
   .c-tit{margin:18px 0 6px;font-size:15px;font-weight:700;padding-top:12px;border-top:1px solid var(--linha)}
   h2 + .c-tit{border-top:0;padding-top:0;margin-top:8px}
   .cv-s{height:230px;margin:6px 0 12px} .cv-m{height:300px;margin:6px 0 12px}
+  .par2{display:grid;grid-template-columns:repeat(auto-fit,minmax(560px,1fr));gap:22px;align-items:start;border-top:1px solid var(--linha);margin-top:18px;padding-top:6px}
+  .par2 > div{min-width:0}
+  .par2 .c-tit{border-top:0;padding-top:0;margin-top:12px}
+  .par2 .cv-s,.par2 .cv-m{height:300px}
   .t-simples{width:100%;min-width:0;border-collapse:collapse;font-size:13px}
   .t-simples th:first-child,.t-simples td:first-child{position:static;border-right:0;background:transparent;white-space:normal}
   .t-simples thead th:first-child{background:var(--suave)}
@@ -261,6 +265,25 @@ const icoGrande = (n, cor) => `<span class="ico" style="--cor:${cor}">${svgIco(n
 document.querySelectorAll('[data-ico]').forEach(el => el.innerHTML = svgIco(el.dataset.ico));
 
 // Balão colorido com o valor do último ponto (como no modelo); os demais valores aparecem ao passar o mouse
+// Valores escritos nos pontos da linha e nas barras horizontais (sem repetir quando o gráfico está apertado)
+const rotulosPontos = cfg => ({id: 'rotulosPontos', afterDatasetsDraw(chart){
+  const {ctx} = chart, meta = chart.getDatasetMeta(0), dados = chart.data.datasets[0].data;
+  ctx.save(); ctx.font = "600 10.5px 'IBM Plex Sans', system-ui, sans-serif"; ctx.lineJoin = 'round';
+  const escreve = (tx, x, y, neg) => { ctx.lineWidth = 3.5; ctx.strokeStyle = '#ffffff'; ctx.fillStyle = neg ? '#b3261e' : '#2a1d14'; ctx.strokeText(tx, x, y); ctx.fillText(tx, x, y); };
+  if (cfg.tipo === 'barraH') {
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    meta.data.forEach((b, i) => { if (dados[i] != null) escreve(cfg.fmt(dados[i]), b.x + 6, b.y, dados[i] < 0); });
+  } else {
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    const pts = meta.data.map((q, i) => ({q, v: dados[i]})).filter(p => p.v != null);
+    if (pts.length) {
+      const larg = Math.max(...pts.map(p => ctx.measureText(cfg.fmt(p.v)).width)) + 10;
+      const esp = pts.length > 1 ? Math.abs(pts[pts.length - 1].q.x - pts[0].q.x) / (pts.length - 1) : larg, passo = Math.max(1, Math.ceil(larg / (esp || larg)));
+      pts.forEach((p, j) => { if ((pts.length - 1 - j) % passo === 0) escreve(cfg.fmt(p.v), p.q.x, p.q.y - 8, p.v < 0); });
+    }
+  }
+  ctx.restore();
+}});
 const rotulosValores = {id:'rotulosValores', afterDatasetsDraw(chart){
   const {ctx} = chart, meta = chart.getDatasetMeta(0), ds = chart.data.datasets[0], dados = ds.data;
   const c = chart.options.casas || 0; let k = dados.length - 1; while (k >= 0 && dados[k] == null) k--;
@@ -525,23 +548,26 @@ async function carregaCausas(q){
     <h3 class="c-tit">Quando as propriedades entraram e saíram</h3><p class="d-resumo">${frase1}</p>
     <div class="d-grid">${bloco('Saídas por mês (último lançamento)', porMes(mv.saidas.por_mes, 'neg'))}${bloco('Quem saiu (maior receita)', quemSaiu)}
       ${bloco('Entradas por mês (primeiro lançamento)', porMes(mv.entradas.por_mes, 'pos'))}${bloco('Quem entrou (maior receita)', quemEntrou)}</div>
+    <div class="par2"><div>
     <h3 class="c-tit">Preço por kg vendido</h3><p class="d-resumo">${fraseP}</p>
     <div class="cv cv-s"><canvas id="cPreco"></canvas></div>
     <div class="d-grid">${bloco('Preço acima da média', precoLista(pc.acima))}${bloco('Preço abaixo da média', precoLista(pc.abaixo))}</div>
+    </div><div>
     <h3 class="c-tit">Despesa direta por subgrupo</h3><p class="d-resumo">Onde o dinheiro foi gasto no período (a soma dos subgrupos é a despesa direta do painel). Compara o mês inicial (<b>${comp || '—'}</b>) com o mês final (<b>${d.mes}</b>): vermelho = a despesa subiu, verde = caiu.</p>
     <div class="cv cv-m"><canvas id="cDesp"></canvas></div>
-    <div class="rolagem" style="max-height:340px"><table class="t-simples"><thead><tr><th>Subgrupo</th><th class="n">Total no período</th><th class="n">% do total</th><th class="n">Mês inicial<br><small>${comp || '—'}</small></th><th class="n">Mês final<br><small>${d.mes}</small></th><th class="n">Variação (R$)<br><small>final − inicial</small></th><th class="n">Variação (%)</th></tr></thead><tbody>${tabDesp || '<tr><td colspan="7">Sem despesa no período.</td></tr>'}</tbody></table></div>`;
+    <div class="rolagem" style="max-height:340px"><table class="t-simples"><thead><tr><th>Subgrupo</th><th class="n">Total no período</th><th class="n">% do total</th><th class="n">Mês inicial<br><small>${comp || '—'}</small></th><th class="n">Mês final<br><small>${d.mes}</small></th><th class="n">Variação (R$)<br><small>final − inicial</small></th><th class="n">Variação (%)</th></tr></thead><tbody>${tabDesp || '<tr><td colspan="7">Sem despesa no período.</td></tr>'}</tbody></table></div>
+    </div></div>`;
   ['cp', 'cd'].forEach(k => { if (charts[k]) { charts[k].destroy(); delete charts[k]; } });
   const tick = {color: css('--mut'), font: {size: 11}};
-  if (pc.serie.length) charts.cp = new Chart($('cPreco'), {type: 'line',
+  if (pc.serie.length) charts.cp = new Chart($('cPreco'), {type: 'line', plugins: [rotulosPontos({tipo: 'linha', fmt: v => 'R$ ' + fmt(v, 2)})],
     data: {labels: pc.serie.map(x => x.mes), datasets: [{data: pc.serie.map(x => x.preco), borderColor: css('--c-venda'), backgroundColor: css('--c-venda'), tension: .25, pointRadius: 3}]},
-    options: {maintainAspectRatio: false, animation: reduz ? false : undefined, plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => 'R$ ' + fmt(c.parsed.y, 2) + ' por kg'}}},
+    options: {maintainAspectRatio: false, animation: reduz ? false : undefined, plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => 'R$ ' + fmt(c.parsed.y, 2) + ' por kg'}}}, layout: {padding: {top: 22, right: 28}},
       scales: {x: {ticks: tick, grid: {display: false}}, y: {ticks: {...tick, callback: v => 'R$ ' + fmt(v, 2)}, grace: '8%'}}}});
   const top = dp.itens.slice(0, 10);
-  if (top.length) charts.cd = new Chart($('cDesp'), {type: 'bar',
+  if (top.length) charts.cd = new Chart($('cDesp'), {type: 'bar', plugins: [rotulosPontos({tipo: 'barraH', fmt: v => 'R$ ' + nf.format(Math.round(v))})],
     data: {labels: top.map(x => x.nome), datasets: [{data: top.map(x => x.total), backgroundColor: css('--c-mat'), borderRadius: 4}]},
     options: {indexAxis: 'y', maintainAspectRatio: false, animation: reduz ? false : undefined,
-      plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => brl2(c.parsed.x) + ' (' + fmt(top[c.dataIndex].pct, 1) + '%)'}}},
+      plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => brl2(c.parsed.x) + ' (' + fmt(top[c.dataIndex].pct, 1) + '%)'}}}, layout: {padding: {right: 92}},
       scales: {x: {ticks: {...tick, callback: v => 'R$ ' + nf.format(v)}}, y: {ticks: tick, grid: {display: false}}}}});
 }
 // ---- Aba "Receitas e despesas": receita bruta, despesa direta e despesa total, por tipo
