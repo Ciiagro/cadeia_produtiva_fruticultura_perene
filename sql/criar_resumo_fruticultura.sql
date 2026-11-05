@@ -70,7 +70,7 @@ WITH ativas AS (  -- propriedades ATIVAS que têm vínculo ATIVO de FRUTICULTURA
 lanc_ids AS (  -- toda propriedade que já teve lançamento da fruticultura (ativa ou não) desde o início da base
   SELECT DISTINCT id_propriedade FROM public.sisateg_receita_despesa
   WHERE atividade = 'FRUTICULTURA PERENE' AND status_item = 'ATIVO' AND tipo_registro = 'PRINCIPAL'
-    AND dt_referencia >= DATE '2024-06-01'
+    AND dt_referencia >= DATE '2023-01-01'
 ),
 todas AS (  -- ativas + inativas que têm lançamento (ativa = TRUE/FALSE)
   SELECT id_propriedade, produtor, tecnico_a, supervisor_a, TRUE AS ativa FROM ativas
@@ -134,7 +134,7 @@ CREATE INDEX ON public.resumo_fruta_propriedades (tecnico);
 -- ---------------------------------------------------------------------
 -- Itens da fruticultura com o MÊS CORRIGIDO: a data do item (dt_referencia) fica velha quando o técnico corrige a referência
 -- da visita no SisATeG; a planilha usa a referência da visita. Regra (igual à Bovinocultura): usa a referência da visita
--- quando ela existe e está a até 366 dias da data do item; senão, a data do item.
+-- quando ela existe, mesmo que os itens tenham data bem mais antiga (item copiado de visita antiga); só ignora referência MUITO ANTERIOR aos itens (> 366 dias).
 DROP TABLE IF EXISTS public.resumo_fruta_rd;
 CREATE TABLE public.resumo_fruta_rd AS
 WITH vis AS (
@@ -146,13 +146,13 @@ WITH vis AS (
 )
 SELECT r.atividade, r.status_item, r.tipo_registro, r.id_propriedade, r.grupo, r.id_visita, r.id_item,
        r.subgrupo, r.item, r.safra, r.id_safra, r.tipo_valor, r.valor,
-       CASE WHEN v.ref IS NOT NULL AND abs(r.dt_referencia::date - v.ref) <= 366
+       CASE WHEN v.ref IS NOT NULL AND (v.ref - r.dt_referencia::date) >= -366
             THEN v.ref::timestamp ELSE r.dt_referencia END AS dt_referencia,
        v.valida AS visita_valida
 FROM public.sisateg_receita_despesa r
 LEFT JOIN vis v ON v.idv = r.id_visita
 WHERE r.atividade = 'FRUTICULTURA PERENE' AND r.status_item = 'ATIVO' AND r.tipo_registro = 'PRINCIPAL'
-  AND r.dt_referencia >= DATE '2024-01-01';
+  AND r.dt_referencia >= DATE '2023-01-01';
 CREATE INDEX ON public.resumo_fruta_rd (id_propriedade);
 CREATE INDEX ON public.resumo_fruta_rd (id_visita);
 ANALYZE public.resumo_fruta_rd;   -- o banco precisa saber o tamanho da tabela nova para escolher um bom plano nos passos seguintes
@@ -163,7 +163,7 @@ CREATE TABLE public.resumo_fruta_visita_ult AS
 SELECT DISTINCT ON (id_propriedade, date_trunc('month', dt_referencia)) id_propriedade,
        date_trunc('month', dt_referencia)::date AS mes, id_visita
 FROM public.resumo_fruta_rd
-WHERE dt_referencia >= DATE '2024-06-01'
+WHERE dt_referencia >= DATE '2023-01-01'
 ORDER BY id_propriedade, date_trunc('month', dt_referencia), (visita_valida = 'Valida') DESC NULLS LAST, id_visita DESC;
 CREATE INDEX ON public.resumo_fruta_visita_ult (id_visita);
 ANALYZE public.resumo_fruta_visita_ult;
@@ -171,7 +171,7 @@ ANALYZE public.resumo_fruta_visita_ult;
 DROP TABLE IF EXISTS public.resumo_fruta_mensal_fruta;
 CREATE TABLE public.resumo_fruta_mensal_fruta AS
 WITH param AS (
-  SELECT DATE '2024-06-01' AS data_inicio, DATE '2026-12-31' AS data_fim
+  SELECT DATE '2023-01-01' AS data_inicio, DATE '2026-12-31' AS data_fim
 ),
 base AS (
   SELECT r.*
@@ -275,7 +275,7 @@ CREATE TABLE public.resumo_fruta_despesa_subgrupo AS
 WITH base AS (
   SELECT r.* FROM public.resumo_fruta_rd r
   WHERE r.atividade = 'FRUTICULTURA PERENE' AND r.status_item = 'ATIVO' AND r.tipo_registro = 'PRINCIPAL'
-    AND r.dt_referencia BETWEEN DATE '2024-06-01' AND DATE '2026-12-31'
+    AND r.dt_referencia BETWEEN DATE '2023-01-01' AND DATE '2026-12-31'
     AND r.grupo = 'Despesa'
     AND r.id_propriedade IN (SELECT id_propriedade FROM public.resumo_fruta_propriedades)
     AND r.id_visita IN (SELECT id_visita FROM public.resumo_fruta_visita_ult)   -- só a última visita do mês (como a planilha do SisATeG)
@@ -309,7 +309,7 @@ CREATE TABLE public.resumo_fruta_tipo AS
 WITH base AS (
   SELECT r.* FROM public.resumo_fruta_rd r
   WHERE r.atividade = 'FRUTICULTURA PERENE' AND r.status_item = 'ATIVO' AND r.tipo_registro = 'PRINCIPAL'
-    AND r.dt_referencia BETWEEN DATE '2024-06-01' AND DATE '2026-12-31'
+    AND r.dt_referencia BETWEEN DATE '2023-01-01' AND DATE '2026-12-31'
     AND r.grupo IN ('Receita','Despesa')
     AND r.id_propriedade IN (SELECT id_propriedade FROM public.resumo_fruta_propriedades)
     AND r.id_visita IN (SELECT id_visita FROM public.resumo_fruta_visita_ult)   -- só a última visita do mês (como a planilha do SisATeG)

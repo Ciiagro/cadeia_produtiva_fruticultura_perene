@@ -248,18 +248,20 @@
     <h2>Conferência com a planilha do SisATeG</h2>
     <p class="d-resumo">Envie a planilha (.xlsx) do SisATeG de <b>um mês</b>. O painel casa cada linha pelo <b>ID da Propriedade</b> e compara <b>Total Receitas</b> com a receita bruta (mais venda de bem e recebimento de empréstimo), <b>Total Despesas</b> com o total de despesas do painel e os <b>kg vendidos</b> (soma das vendas em kg). Diferenças de até R$ 1,00 (ou 1 kg) são ignoradas.</p>
     <div class="macro-ctl"><label>Planilha do SisATeG<input type="file" id="confArq" accept=".xlsx,.xls" autocomplete="off"></label>
-      <label>Propriedades do painel<select id="confSit" autocomplete="off"><option value="ativas">Só ativas (como a planilha)</option><option value="todas">Ativas e inativas</option></select></label></div>
+      <label>Propriedades do painel<select id="confSit" autocomplete="off"><option value="ativas">Só ativas (como a planilha)</option><option value="todas">Ativas e inativas</option></select></label>
+      <label>Técnico<select id="confTec" autocomplete="off"><option value="">Todos os técnicos</option></select></label></div>
     <div id="confCorpo"><p class="d-vazio">Escolha a planilha para conferir.</p></div>
   </section>
   <div class="graficos" id="aba-graficos">
-    <section class="graf" style="--cor:var(--c-receita)"><div class="g-topo"><span class="ico g" data-ico="moedas"></span><div class="g-tit"><h2>Receita bruta (R$)</h2><p class="formula">Tudo que entrou na atividade, sem empréstimo nem investimento</p></div><div class="pill" id="pl-c1"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c1"></canvas></div></section>
-    <section class="graf" style="--cor:var(--c-desp)"><div class="g-topo"><span class="ico g" data-ico="calc"></span><div class="g-tit"><h2>Despesa direta (R$)</h2><p class="formula">Gastos diretos da atividade, sem empréstimo, investimento, formação da lavoura e mão de obra familiar</p></div><div class="pill" id="pl-c7"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c7"></canvas></div></section>
-    <section class="graf" style="--cor:var(--c-venda)"><div class="g-topo"><span class="ico g" data-ico="garrafa"></span><div class="g-tit"><h2>Venda de fruta (R$)</h2><p class="formula">Fruta vendida em kg e em unidade (sem mudas e subprodutos)</p></div><div class="pill" id="pl-c6"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c6"></canvas></div></section>
+    <section class="graf" style="--cor:var(--c-receita)"><div class="g-topo"><span class="ico g" data-ico="moedas"></span><div class="g-tit"><h2>Renda Bruta da Atividade (R$)</h2><p class="formula">Tudo que entrou na atividade, sem empréstimo nem investimento</p></div><div class="pill" id="pl-c1"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c1"></canvas></div></section>
+    <section class="graf" style="--cor:var(--c-desp)"><div class="g-topo"><span class="ico g" data-ico="calc"></span><div class="g-tit"><h2>COE da Atividade (R$)</h2><p class="formula">Custo Operacional Efetivo: gastos diretos da atividade, sem empréstimo, investimento, formação da lavoura e mão de obra familiar</p></div><div class="pill" id="pl-c7"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c7"></canvas></div></section>
+    <section class="graf" style="--cor:var(--c-mat)"><div class="g-topo"><span class="ico g" data-ico="barras"></span><div class="g-tit"><h2>Margem bruta da atividade (R$)</h2><p class="formula">Receita bruta &minus; despesa direta</p></div><div class="pill" id="pl-c3"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c3"></canvas></div></section>
+    <section class="graf" style="--cor:var(--c-venda)"><div class="g-topo"><span class="ico g" data-ico="garrafa"></span><div class="g-tit"><h2>Renda Bruta da Venda de Fruta (R$)</h2><p class="formula">Fruta vendida em kg e em unidade (sem mudas e subprodutos)</p></div><div class="pill" id="pl-c6"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c6"></canvas></div></section>
+    <section class="graf" style="--cor:var(--c-desp)"><div class="g-topo"><span class="ico g" data-ico="calc"></span><div class="g-tit"><h2>COE da Atividade / Fruta vendida (R$/kg)</h2><p class="formula">COE &divide; kg de fruta vendidos no mês</p></div><div class="pill" id="pl-c11"><b>–</b><small>Média no período</small></div></div><div class="cv"><canvas id="c11"></canvas></div></section>
+    <section class="graf" style="--cor:var(--c-mleite)"><div class="g-topo"><span class="ico g" data-ico="calc"></span><div class="g-tit"><h2>Margem bruta da venda de fruta (R$)</h2><p class="formula">Venda de fruta &minus; despesa direta</p></div><div class="pill" id="pl-c4"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c4"></canvas></div></section>
     <section class="graf" style="--cor:var(--c-venda)"><div class="g-topo"><span class="ico g" data-ico="garrafa"></span><div class="g-tit"><h2>Preço médio por kg vendido (R$/kg)</h2><p class="formula">Média dos preços das propriedades: venda de fruta em kg ÷ kg vendidos</p></div><div class="pill" id="pl-c8"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c8"></canvas></div></section>
     <section class="graf" style="--cor:var(--c-prod)"><div class="g-topo"><span class="ico g" data-ico="gota"></span><div class="g-tit"><h2>Fruta vendida (kg)</h2><p class="formula">Só itens vendidos em kg (unidades não entram)</p></div><div class="pill" id="pl-c2"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c2"></canvas></div></section>
     <section class="graf" style="--cor:var(--c-un)"><div class="g-topo"><span class="ico g" data-ico="gota"></span><div class="g-tit"><h2>Fruta vendida (unidades)</h2><p class="formula">Só itens vendidos por unidade (kg não entra)</p></div><div class="pill" id="pl-c9"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c9"></canvas></div></section>
-    <section class="graf" style="--cor:var(--c-mat)"><div class="g-topo"><span class="ico g" data-ico="barras"></span><div class="g-tit"><h2>Margem bruta da atividade (R$)</h2><p class="formula">Receita bruta &minus; despesa direta</p></div><div class="pill" id="pl-c3"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c3"></canvas></div></section>
-    <section class="graf" style="--cor:var(--c-mleite)"><div class="g-topo"><span class="ico g" data-ico="calc"></span><div class="g-tit"><h2>Margem bruta da venda de fruta (R$)</h2><p class="formula">Venda de fruta &minus; despesa direta</p></div><div class="pill" id="pl-c4"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c4"></canvas></div></section>
     <section class="graf" style="--cor:var(--c-media)"><div class="g-topo"><span class="ico g" data-ico="pessoas"></span><div class="g-tit"><h2>Kg vendidos por produtor (kg)</h2><p class="formula">Kg vendidos ÷ produtores com lançamento no mês</p></div><div class="pill" id="pl-c5"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c5"></canvas></div></section>
     <section class="graf" style="--cor:var(--c-un)"><div class="g-topo"><span class="ico g" data-ico="pessoas"></span><div class="g-tit"><h2>Unidades vendidas por produtor</h2><p class="formula">Unidades vendidas ÷ produtores com lançamento no mês</p></div><div class="pill" id="pl-c10"><b>–</b><small>Total no período</small></div></div><div class="cv"><canvas id="c10"></canvas></div></section>
   </div>
@@ -350,7 +352,7 @@ function desenha(id, rotulos, valores, cor, casas, moeda, parcial, aceitaNegativ
     options:{casas, moedaTxt:moeda, responsive:true, maintainAspectRatio:false, animation: reduz ? false : undefined,
       interaction:{mode:'index', intersect:false},
       layout:{padding:{top:38, right:14, left:4}},
-      plugins:{legend:{display:false}, tooltip:{callbacks:{label: c => moeda ? 'R$ ' + fmt(c.parsed.y, casas) + (id === 'c8' ? ' por kg' : '') : fmt(c.parsed.y, casas) + ' kg'}}},
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label: c => moeda ? 'R$ ' + fmt(c.parsed.y, casas) + (id === 'c8' || id === 'c11' ? ' por kg' : '') : fmt(c.parsed.y, casas) + ' kg'}}},
       scales:{
         x:{grid:{display:false}, ticks:{maxRotation:0, autoSkip:true, maxTicksLimit:12,
            callback(val){ const l = this.getLabelForValue(val); return l.slice(5) + '/' + l.slice(2,4); }}},
@@ -493,6 +495,7 @@ async function atualiza(){
   setPill('c4', soma('margem_leite'), true, 'Total no período', 2);
   setPill('c5', media('producao_media_produtor'), false, 'Média no período', 0);
   setPill('c10', media('unidades_media_produtor'), false, 'Média no período', 0);
+  { const sp = soma('producao'); setPill('c11', sp ? soma('despesa_direta')/sp : null, true, 'Média no período', 2); }
   desenha('c1', m, d.map(x=>x.receita_bruta), css('--c-receita'), 2, true, parcial);
   desenha('c6', m, d.map(x=>x.venda_leite), css('--c-venda'), 2, true, parcial);
   desenha('c7', m, d.map(x=>x.despesa_direta), css('--c-desp'), 2, true, parcial);
@@ -503,6 +506,7 @@ async function atualiza(){
   desenha('c9', m, d.map(x=>x.unidades), css('--c-un'), 0, false, parcial);
   desenha('c5', m, d.map(x=>x.producao_media_produtor), css('--c-media'), 0, false, parcial);
   desenha('c10', m, d.map(x=>x.unidades_media_produtor), css('--c-un'), 0, false, parcial);
+  desenha('c11', m, d.map(x=>(+x.producao > 0 ? x.despesa_direta/x.producao : null)), css('--c-desp'), 2, true, parcial);
   const grupos = ['Receita bruta','Venda de fruta','Preço por kg (R$)','Despesa direta','Kg vendidos','Margem da atividade','Margem da venda de fruta','Kg/produtor'];
   $('tab').innerHTML = '<thead><tr><th rowspan="2">Mês</th><th rowspan="2" class="sep">Com lançamento</th>' +
     grupos.map(g=>`<th class="g" colspan="2">${g}</th>`).join('') + '</tr><tr>' + grupos.map(()=>'<th class="sep">Valor</th><th>Var.</th>').join('') + '</tr></thead><tbody>' +
@@ -765,8 +769,8 @@ function desenhaMacro(){
     ${semBase.length || semLancRef.length ? `<details class="mini"><summary>Quem não aparece nas barras (${semBase.length + semLancRef.length})</summary>${semBase.length ? `<p><b>Sem propriedade comparável (novas):</b> ${semBase.join(', ')}.</p>` : ''}${semLancRef.length ? `<p><b>Sem lançamento de fruticultura em ${ref} (fora do painel neste mês):</b> ${semLancRef.join(', ')}.</p>` : ''}</details>` : ''}
     ${modoVal ? rankHtml : `<div class="cv" style="height:${Math.max(300, 22 * ncres + 70)}px"><canvas id="cCres"></canvas></div>`}
     </div><div>
-    <h3 class="c-tit">Evolução de ${MM[met].toLowerCase()} por ${nivel}</h3>
-    <p class="d-resumo">Os 8 maiores no período De/Até.</p>
+    <h3 class="c-tit" id="macTit">Evolução de ${MM[met].toLowerCase()} por ${nivel}</h3>
+    <p class="d-resumo" id="macSub">Os 8 maiores no período De/Até.</p>
     <div class="cv" style="height:${Math.max(300, Math.min(22 * ncres + 70, 520))}px"><canvas id="cMacro"></canvas></div>
     </div></div>
     ${volta}
@@ -776,7 +780,7 @@ function desenhaMacro(){
     <p class="d-resumo">Verde = cresceu, vermelho = caiu em relação ao mesmo mês do ano anterior (intensidade até ±50%). Cinza com “–” = sem lançamento no mês (não é queda de 100%).${usaLfl && (met === 'rec' || met === 'prod') ? ' Comparação só com as propriedades que lançaram nos dois meses.' : ''}${grupos.length > 40 ? ' Mostra os 40 maiores em ' + ref + '.' : ''}</p>${hm}</details>`;
   box.querySelectorAll('.rk[data-reg]').forEach(row => row.onclick = async () => {
     const sub = row.nextElementSibling, nm = row.dataset.reg;
-    if (!sub.hidden) { sub.hidden = true; row.querySelector('b').textContent = '▸ ' + nm; return; }
+    if (!sub.hidden) { sub.hidden = true; row.querySelector('b').textContent = '▸ ' + nm; desenhaMacro(); return; }
     row.querySelector('b').textContent = '▾ ' + nm; sub.hidden = false; sub.innerHTML = '<p class="d-vazio">Carregando municípios…</p>';
     try {
       const q = new URLSearchParams({cadeia: 'fruta', nivel: 'municipio', regiao: nm, situacao: $('sit').value, ate: $('ate').value});
@@ -789,6 +793,21 @@ function desenhaMacro(){
         <span style="background:#e9efe9;border-radius:4px;height:6px;display:block"><span style="display:block;height:6px;border-radius:4px;background:#5d9b7a;width:${Math.max(2, z.cur / mx * 100)}%"></span></span>
         <span style="text-align:right;font-variant-numeric:tabular-nums">${fm(met, z.cur)}</span><span style="text-align:right;color:var(--mut)" title="Participação na região">${fmt(z.cur / tt * 100, 1)}%</span></div>`).join('')
         : '<p class="d-vazio">Nenhum município com lançamento em ' + ref + '.</p>';
+      // o gráfico de linhas passa a mostrar os municípios da região escolhida
+      const fx = meses.map((m, i) => i).filter(i => meses[i] >= de && i <= ri);
+      const sm = (dm.grupos || []).map(g => ({nome: g.nome, s: fx.map(i => { const j = dm.meses.indexOf(meses[i]); return j >= 0 ? (g[met][j] || 0) : 0; })}))
+        .sort((a, b) => b.s.reduce((x, y) => x + y, 0) - a.s.reduce((x, y) => x + y, 0)).slice(0, 8);
+      if (sm.length && fx.length && $('cMacro')) {
+        if (charts.cm) charts.cm.destroy();
+        const tk = {color: getComputedStyle(document.documentElement).getPropertyValue('--mut').trim(), font: {size: 11}};
+        charts.cm = new Chart($('cMacro'), {type: 'line',
+          data: {labels: fx.map(i => meses[i]), datasets: sm.map((g, k) => ({label: g.nome, data: g.s, borderColor: MCOR[k % 8], backgroundColor: MCOR[k % 8], tension: .25, pointRadius: 2, borderWidth: 2}))},
+          options: {maintainAspectRatio: false, animation: reduz ? false : undefined, interaction: {mode: 'index', intersect: false},
+            plugins: {legend: {position: 'bottom', labels: {boxWidth: 12, font: {size: 11}}}, tooltip: {callbacks: {label: c => c.dataset.label + ': ' + fm(met, c.parsed.y)}}},
+            scales: {x: {ticks: tk, grid: {display: false}}, y: {ticks: {...tk, callback: x => met === 'rec' ? 'R$ ' + nf.format(x) : nf.format(x)}, beginAtZero: true}}}});
+        $('macTit').textContent = 'Evolução de ' + MM[met].toLowerCase() + ' por município: ' + nm;
+        $('macSub').textContent = 'Os 8 maiores municípios desta região no período De/Até. Clique de novo na região para voltar.';
+      }
     } catch(e) { sub.innerHTML = '<p class="d-vazio">Não consegui carregar os municípios: ' + e.message + '</p>'; }
   });
   box.querySelectorAll('.mvolta').forEach(b => b.onclick = () => { $('mniv').value = 'regiao'; $('reg').value = ''; $('reg').onchange(); });
@@ -843,7 +862,7 @@ async function conferePlanilha(file){
     const linhasTodas = [], meses = new Set();
     dados.forEach(l => { const idv = g(l, 'ID Propriedade') != null ? String(g(l, 'ID Propriedade')).trim() : ''; if (!/^\d+$/.test(idv)) return;   // ignora a linha "Total"
       const mes = String(Math.round(numC(g(l, 'Ano')))) + '-' + String(Math.round(numC(g(l, 'Mês')))).padStart(2, '0'); meses.add(mes);
-      linhasTodas.push({visita: idv, id: String(g(l, 'ID Propriedade') ?? '').trim(), propriedade: g(l, 'Propriedade'), municipio: g(l, 'Município'),
+      linhasTodas.push({visita: idv, id: String(g(l, 'ID Propriedade') ?? '').trim(), propriedade: g(l, 'Propriedade'), municipio: g(l, 'Município'), tecnico: String(g(l, 'Técnico') ?? '').trim(),
         rec: numC(g(l, 'Total Receitas')), desp: numC(g(l, 'Total Despesas')), prod: colsKg.reduce((t, k) => t + numC(l[k]), 0)}); });
     let linhas = linhasTodas, nTreino = 0;
     if (!linhas.length) { box.innerHTML = '<p class="d-vazio">Não encontrei linhas de dados abaixo do cabeçalho.</p>'; return; }
@@ -854,6 +873,11 @@ async function conferePlanilha(file){
     const P0 = d.itens; P0.forEach(p => { p.recC = p.rec + (p.rec_fora || 0); });
     const treinoSet = new Set((d.treino || []).map(String));   // projetos de treinamento não entram no painel: ficam fora da conferência
     linhas = linhasTodas.filter(l => !treinoSet.has(l.id)); nTreino = linhasTodas.length - linhas.length;
+    // filtro por técnico: a lista vem da própria planilha (refeita a cada planilha nova)
+    const tecs = [...new Set(linhas.map(l => l.tecnico).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    if (file !== confTecArq) { $('confTec').innerHTML = '<option value="">Todos os técnicos</option>' + tecs.map(t => `<option>${String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</option>`).join(''); confTecArq = file; }
+    const tecSel = $('confTec').value;
+    if (tecSel) linhas = linhas.filter(l => l.tecnico === tecSel);
     if (!linhas.length) { box.innerHTML = '<p class="d-vazio">Só há propriedades de treinamento nessa planilha.</p>'; return; }
     // casa pelo ID da Visita; se o servidor ainda não tem a coluna id_visita, casa pela propriedade (e avisa)
     const porVisita = new Map(), porProp = new Map();
@@ -862,7 +886,7 @@ async function conferePlanilha(file){
     const grupo = new Map(), soArq = [], soZero = [];
     linhas.forEach(l => { const p = porProp.get(l.id);
       if (!p) { (Math.abs(l.rec) + Math.abs(l.desp) + Math.abs(l.prod) <= 1 ? soZero : soArq).push(l); return; }   // visita sem nenhum lançamento: o painel não mostra (esperado)
-      const o = grupo.get(p) || {p, rec: 0, desp: 0, prod: 0, visitas: [], propriedade: l.propriedade, municipio: l.municipio, id: l.id};
+      const o = grupo.get(p) || {p, rec: 0, desp: 0, prod: 0, visitas: [], propriedade: l.propriedade, municipio: l.municipio, tecnico: l.tecnico, id: l.id};
       o.rec += l.rec; o.desp += l.desp; o.prod += l.prod; o.visitas.push(l.visita); grupo.set(p, o); });
     const P = P0.filter(p => $('confSit').value === 'todas' || p.ativa || grupo.has(p));   // a planilha só traz propriedades ativas; "Ativas e inativas" mostra também as inativas do painel
     const A = linhas, dif = [], soPan = P.filter(p => !grupo.has(p));
@@ -886,8 +910,8 @@ async function conferePlanilha(file){
       if (Math.abs(x.dp) > 1) partes.push(`Kg vendidos: painel ${nf.format(Math.round(p.prod))} kg x planilha ${nf.format(Math.round(x.a.prod))} kg`);
       return partes.join(' | ');
     };
-    const tabDif = dif.length ? `<div class="rolagem" style="max-height:460px"><table class="t-simples"><thead><tr><th>ID Propriedade</th><th>Propriedade</th><th>Município</th><th class="n">Receita planilha</th><th class="n" title="receita bruta + venda de bem e recebimento de empréstimo (o SisATeG soma tudo em Receitas)">Receita painel</th><th class="n">Δ receita</th><th class="n">Despesa planilha</th><th class="n">Despesa painel</th><th class="n">Δ despesa</th><th class="n">Δ kg vendidos</th><th title="De que é a diferença: o que o painel tem lançado nesta propriedade no mês">De que é a diferença</th></tr></thead><tbody>` +
-      dif.slice(0, 300).map(x => `<tr><td>${x.a.visitas.join(', ')}</td><td>${x.a.propriedade ?? ''}</td><td>${x.a.municipio ?? ''}</td><td class="n">${R(x.a.rec)}</td><td class="n">${R(x.p.recC)}</td><td class="n">${R(x.dr)}</td><td class="n">${R(x.a.desp)}</td><td class="n">${R(x.p.desp)}</td><td class="n">${R(x.dd)}</td><td class="n">${nf.format(Math.round(x.dp))}</td><td>${escH(oQue(x.p, x))}</td></tr>`).join('') + `</tbody></table></div>${dif.length > 300 ? `<p class="d-resumo">Mostrando as 300 maiores de ${dif.length}. Baixe o arquivo para ver todas.</p>` : ''}` : '';
+    const tabDif = dif.length ? `<div class="rolagem" style="max-height:460px"><table class="t-simples"><thead><tr><th>ID Propriedade</th><th>Propriedade</th><th>Município</th><th>Técnico</th><th class="n">Receita planilha</th><th class="n" title="receita bruta + venda de bem e recebimento de empréstimo (o SisATeG soma tudo em Receitas)">Receita painel</th><th class="n">Δ receita</th><th class="n">Despesa planilha</th><th class="n">Despesa painel</th><th class="n">Δ despesa</th><th class="n">Δ kg vendidos</th><th title="De que é a diferença: o que o painel tem lançado nesta propriedade no mês">De que é a diferença</th></tr></thead><tbody>` +
+      dif.slice(0, 300).map(x => `<tr><td>${x.a.visitas.join(', ')}</td><td>${x.a.propriedade ?? ''}</td><td>${x.a.municipio ?? ''}</td><td>${escH(x.a.tecnico)}</td><td class="n">${R(x.a.rec)}</td><td class="n">${R(x.p.recC)}</td><td class="n">${R(x.dr)}</td><td class="n">${R(x.a.desp)}</td><td class="n">${R(x.p.desp)}</td><td class="n">${R(x.dd)}</td><td class="n">${nf.format(Math.round(x.dp))}</td><td>${escH(oQue(x.p, x))}</td></tr>`).join('') + `</tbody></table></div>${dif.length > 300 ? `<p class="d-resumo">Mostrando as 300 maiores de ${dif.length}. Baixe o arquivo para ver todas.</p>` : ''}` : '';
     let vp = {};   // onde o painel tem cada visita que só aparece na planilha (outro mês, ou nenhum)
     const motivoVisita = l => 'A propriedade não tem lançamento neste mês no painel: sem receita/despesa/kg lançados, projeto de Treinamento ou visita excluída no SisATeG. Confira o mês de referência dos lançamentos no SisATeG.';
     const nomeA = l => `${l.visita} · ${l.propriedade ?? ''} (${l.municipio ?? ''})`, nomeP = p => `${p.id} ${p.propriedade ?? ''} (${p.municipio ?? ''})`;
@@ -904,13 +928,14 @@ async function conferePlanilha(file){
         return `<tr><td>${escH(p.id)}</td><td>${escH(p.propriedade)}</td><td>${escH(p.municipio)}</td><td class="n">${R(p.recC)}</td><td class="n">${R(p.desp)}</td><td class="n">${nf.format(Math.round(p.prod))}</td><td>${escH((p.ativa ? 'Propriedade ativa, mas fora da planilha neste mês. ' : 'Propriedade inativa. ') + pt.join(' | '))}</td></tr>`; }).join('')}</tbody></table></div></div>` : ''}
       ${dif.length ? `<h3 class="c-tit">Visitas com valor diferente (maiores diferenças primeiro)</h3>${tabDif}<p><button type="button" id="confBaixa" class="btn">Baixar todas as diferenças (.xlsx)</button></p>` : ''}`;
     const bt = $('confBaixa');
-    if (bt) bt.onclick = () => { const ws = XLSX.utils.json_to_sheet(dif.map(x => ({'ID Propriedade': x.a.id, 'Propriedade': x.a.propriedade, 'Município': x.a.municipio, 'Receita planilha': x.a.rec, 'Receita painel': x.p.recC, 'Δ receita': x.dr, 'Despesa planilha': x.a.desp, 'Despesa painel': x.p.desp, 'Δ despesa': x.dd, 'Produção planilha': x.a.prod, 'Produção painel': x.p.prod, 'Δ produção': x.dp, 'De que é a diferença': oQue(x.p, x)})).concat(soArq.map(x => ({'ID Visita': x.visita, 'ID Propriedade': x.id, 'Propriedade': x.propriedade, 'Município': x.municipio, 'Receita planilha': x.rec, 'Despesa planilha': x.desp, 'Produção planilha': x.prod, 'Observação': 'só na planilha'}))));
+    if (bt) bt.onclick = () => { const ws = XLSX.utils.json_to_sheet(dif.map(x => ({'ID Propriedade': x.a.id, 'Propriedade': x.a.propriedade, 'Município': x.a.municipio, 'Técnico': x.a.tecnico, 'Receita planilha': x.a.rec, 'Receita painel': x.p.recC, 'Δ receita': x.dr, 'Despesa planilha': x.a.desp, 'Despesa painel': x.p.desp, 'Δ despesa': x.dd, 'Produção planilha': x.a.prod, 'Produção painel': x.p.prod, 'Δ produção': x.dp, 'De que é a diferença': oQue(x.p, x)})).concat(soArq.map(x => ({'ID Visita': x.visita, 'ID Propriedade': x.id, 'Propriedade': x.propriedade, 'Município': x.municipio, 'Receita planilha': x.rec, 'Despesa planilha': x.desp, 'Produção planilha': x.prod, 'Observação': 'só na planilha'}))));
       const w2 = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(w2, ws, 'Diferenças'); XLSX.writeFile(w2, 'conferencia_' + mes + '.xlsx'); };
   } catch (e) { box.innerHTML = '<p class="d-vazio">Erro ao conferir: ' + e.message + '</p>'; }
 }
-let confArquivo = null;
-$('confArq').onchange = ev => { confArquivo = ev.target.files[0]; if (confArquivo) conferePlanilha(confArquivo); };
+let confArquivo = null, confTecArq = null;
+$('confArq').onchange = ev => { confArquivo = ev.target.files[0]; confTecArq = null; if (confArquivo) conferePlanilha(confArquivo); };
 $('confSit').onchange = () => { if (confArquivo) conferePlanilha(confArquivo); };
+$('confTec').onchange = () => { if (confArquivo) conferePlanilha(confArquivo); };
 function mostraAba(nome){
   const alvos = {macro:'macro', graficos:'aba-graficos', destaques:'destaques', causas:'causas', tipos:'tipos', conf:'conf', tabela:'aba-tabela'};
   Object.entries(alvos).forEach(([n, id]) => { $(id).hidden = (n !== nome); });
